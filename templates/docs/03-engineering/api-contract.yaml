@@ -1,0 +1,7 @@
+# Illustrative OpenAPI contract skeleton, NOT an implemented API.
+openapi: 3.1.0
+info:
+  title: Project API (draft)
+  version: 0.0.0
+  description: "TODO: Document approved API scope, security schemes, error responses and schema contracts."
+paths: {}

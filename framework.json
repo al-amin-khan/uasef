@@ -1,0 +1,18 @@
+{
+  "name": "UASEF",
+  "version": "0.2.0",
+  "methodology": "research-evaluate-decide-specify-implement-verify-learn",
+  "inception_workflow": "workflows/inception.json",
+  "portable_skill_directory": "skills",
+  "role_directory": "agents",
+  "policies": "policies",
+  "approval_tasks": [
+    "INIT-005",
+    "INIT-006",
+    "INIT-011",
+    "INIT-016"
+  ],
+  "agent_runtime": "manual prompts or opt-in configured subprocess CLI",
+  "execution_mode": "explicit opt-in; human-supervised with independent review",
+  "orchestration": "SQLite transactional execution tasks, leases, retries, verification and approvals"
+}

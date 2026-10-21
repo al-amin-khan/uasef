@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "manual": {"type": "manual"},
+    "codex": {"type": "subprocess", "argv": ["codex", "exec", "--sandbox", "workspace-write", "-"], "timeout_seconds": 900},
+    "gemini": {"type": "subprocess", "argv": ["gemini", "--sandbox"], "timeout_seconds": 900}
+  }
+}

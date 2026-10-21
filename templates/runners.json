@@ -1,0 +1,5 @@
+{
+  "profiles": {
+    "manual": {"type": "manual"}
+  }
+}

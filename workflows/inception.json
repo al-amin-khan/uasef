@@ -1,0 +1,206 @@
+{
+  "name": "Universal Project Inception",
+  "schema_version": 1,
+  "description": "Sequential, human-gated project initiation; agents execute the actual research and writing.",
+  "tasks": [
+    {
+      "id": "INIT-001",
+      "title": "Idea intake",
+      "role": "product-manager",
+      "depends_on": [],
+      "outputs": [
+        "docs/00-inception/idea-brief.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-002",
+      "title": "Problem and requirements discovery",
+      "role": "business-analyst",
+      "depends_on": [
+        "INIT-001"
+      ],
+      "outputs": [
+        "docs/00-inception/problem-discovery.md",
+        "docs/00-inception/assumptions.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-003",
+      "title": "User research",
+      "role": "researcher",
+      "depends_on": [
+        "INIT-002"
+      ],
+      "outputs": [
+        "docs/00-inception/user-research.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-004",
+      "title": "Alternative and competitor analysis",
+      "role": "researcher",
+      "depends_on": [
+        "INIT-003"
+      ],
+      "outputs": [
+        "docs/00-inception/market-alternatives.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-005",
+      "title": "Feasibility and go/no-go",
+      "role": "cto",
+      "depends_on": [
+        "INIT-004"
+      ],
+      "outputs": [
+        "docs/00-inception/feasibility.md"
+      ],
+      "approval_required": true
+    },
+    {
+      "id": "INIT-006",
+      "title": "MVP product definition",
+      "role": "product-manager",
+      "depends_on": [
+        "INIT-005"
+      ],
+      "outputs": [
+        "docs/01-product/prd.md",
+        "docs/01-product/mvp-scope.md"
+      ],
+      "approval_required": true
+    },
+    {
+      "id": "INIT-007",
+      "title": "Detailed functional analysis",
+      "role": "business-analyst",
+      "depends_on": [
+        "INIT-006"
+      ],
+      "outputs": [
+        "docs/01-product/srs.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-008",
+      "title": "Experience and navigation design",
+      "role": "ux-designer",
+      "depends_on": [
+        "INIT-007"
+      ],
+      "outputs": [
+        "docs/02-design/user-flows.md",
+        "docs/02-design/screen-inventory.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-009",
+      "title": "Visual design brief",
+      "role": "ux-designer",
+      "depends_on": [
+        "INIT-008"
+      ],
+      "outputs": [
+        "docs/02-design/design-brief.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-010",
+      "title": "Existing solution and dependency research",
+      "role": "researcher",
+      "depends_on": [
+        "INIT-009"
+      ],
+      "outputs": [
+        "docs/03-engineering/solution-research.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-011",
+      "title": "Technology stack selection",
+      "role": "software-architect",
+      "depends_on": [
+        "INIT-010"
+      ],
+      "outputs": [
+        "docs/03-engineering/technology-evaluation.md",
+        "docs/03-engineering/adr/ADR-001-stack.md"
+      ],
+      "approval_required": true
+    },
+    {
+      "id": "INIT-012",
+      "title": "System, data and API architecture",
+      "role": "software-architect",
+      "depends_on": [
+        "INIT-011"
+      ],
+      "outputs": [
+        "docs/03-engineering/architecture.md",
+        "docs/03-engineering/data-model.md",
+        "docs/03-engineering/api-contract.yaml"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-013",
+      "title": "Security and operational baselines",
+      "role": "security-engineer",
+      "depends_on": [
+        "INIT-012"
+      ],
+      "outputs": [
+        "docs/03-engineering/nfr.md",
+        "docs/03-engineering/security-baseline.md",
+        "docs/05-operations/deployment.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-014",
+      "title": "MVP implementation planning",
+      "role": "orchestrator",
+      "depends_on": [
+        "INIT-013"
+      ],
+      "outputs": [
+        "docs/04-delivery/feature-backlog.md",
+        "docs/04-delivery/implementation-plan.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-015",
+      "title": "Quality and test planning",
+      "role": "qa-engineer",
+      "depends_on": [
+        "INIT-014"
+      ],
+      "outputs": [
+        "docs/04-delivery/test-strategy.md"
+      ],
+      "approval_required": false
+    },
+    {
+      "id": "INIT-016",
+      "title": "Independent inception readiness review",
+      "role": "orchestrator",
+      "depends_on": [
+        "INIT-015"
+      ],
+      "outputs": [
+        "docs/00-inception/readiness-review.md"
+      ],
+      "approval_required": true
+    }
+  ]
+}
