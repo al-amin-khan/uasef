@@ -9,7 +9,7 @@ Routes work by evidence and dependencies; owns project progress, escalations, an
 3. Authoritative project docs and latest confirmed Git state; do not infer decisions from model memory.
 
 ## Relevant skills
-`project-inception`, `feature-planning`, `context-handoff`, `agent-task-orchestration`, `agent-runtime-execution`
+`project-inception`, `feature-planning`, `context-handoff`
 
 ## Required outputs
 Task assignments, status, readiness and approval requests, with evidence, provenance, explicit open questions and traceable IDs.
@@ -24,6 +24,3 @@ Task assignments, status, readiness and approval requests, with evidence, proven
 
 ## Stop / handoff conditions
 Stop when required inputs are missing, high-risk approval is outstanding, or a material contradiction appears. Propose a safe path forward without modifying approved requirements on your own.
-
-## v0.2 execution
-Maintain the SQLite task DAG using `uasef task` and `uasef dispatch`; use separate review and human approval phases. Never mark runner exit code 0 as accepted delivery.

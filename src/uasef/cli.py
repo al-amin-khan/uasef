@@ -13,7 +13,7 @@ import re
 import shutil
 import sys
 
-VERSION = "0.3.0"
+VERSION = "0.1.0"
 TASK_RE = re.compile(r"^INIT-0(?:0[1-9]|1[0-6])$")
 SLUG_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 SKILL_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -168,36 +168,8 @@ def init(args):
              "idea": idea, "created_at": now(), "updated_at": now(),
              "tasks": tasks, "audit": []}
     log(state, "init", note=f"adapter={args.adapter}")
-    # Execution state is project-local and deliberately excluded from Git by default.
-    write_if_missing(p / ".uasef" / "runners.json", (root / "templates" / "runners.json").read_text(encoding="utf-8"))
-    write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\n")
     save(p, state)
     print(f"Initialized {name} at {p}\nStart with: uasef next --project {p}")
-
-
-def upgrade(args):
-    """Install missing tools into an existing supported project without clobbering."""
-    root = framework_root()
-    p = Path(args.project).resolve()
-    state = load(p)
-    if state.get("framework_version") not in ("0.1.0", "0.2.0", "0.3.0"):
-        raise ValueError("Unsupported source framework version; review upgrade manually")
-    for policy in (root / "policies").glob("*.md"):
-        copy_if_missing(policy, p / ".uasef" / "policies" / policy.name)
-    for role in (root / "agents").glob("*.md"):
-        copy_if_missing(role, p / ".uasef" / "roles" / role.name)
-    install_adapter(root,p,"codex")
-    if args.adapter != "codex":
-        install_adapter(root,p,args.adapter)
-    write_if_missing(p / ".uasef" / "runners.json", (root / "templates" / "runners.json").read_text(encoding="utf-8"))
-    write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\n")
-    ignored=p / ".uasef" / ".gitignore"
-    if "sessions/" not in ignored.read_text(encoding="utf-8").splitlines():
-        with ignored.open("a", encoding="utf-8") as f: f.write("\nsessions/\n")
-    state["framework_version"] = VERSION
-    log(state, "framework_upgrade", note="New files copied without replacing customized agent instructions")
-    save(p,state)
-    print(f"Upgraded execution tools for {p} to UASEF {VERSION}. Existing role/policy files were not overwritten; reconcile changes manually.")
 
 
 def status(args):
@@ -322,16 +294,6 @@ def handoff(args):
                "## State (verify actual artifacts before acting)", ""]
     for t in state["tasks"]:
         summary.append(f"- {t['id']} **{t['status']}** {t['title']}; outputs: {', '.join(t['outputs'])}")
-    from . import orchestrator as orch
-    with orch.db(p) as conn:
-        active = orch.list_tasks(conn)
-        if active:
-            summary.extend(["", "## v0.2 execution tasks (transactional state)", ""])
-            for item in active:
-                summary.append(f"- {item['id']} **{item['status']}** [{item['role']} / {item['skill']}]; acceptance: {item['acceptance']}; dependencies: {', '.join(item['dependencies']) or 'none'}")
-                recent = conn.execute("SELECT id,profile,status,workspace,log_path FROM runs WHERE task_id=? ORDER BY started_at DESC LIMIT 1", (item['id'],)).fetchone()
-                if recent:
-                    summary.append(f"  - Last run: {recent['id']} ({recent['profile']}, {recent['status']}); workspace: {recent['workspace']}; log: {recent['log_path']}")
     summary.extend(["", "## Instructions for successor agent", "1. Read AGENTS.md and local policy files.",
                     "2. Verify repository HEAD, current branch, and the real files; do not trust this handoff alone.",
                     "3. Continue current or next eligible task; do not bypass approvals.",
@@ -373,17 +335,9 @@ def main(argv=None):
         if command == "complete": q.add_argument("--evidence", action="append")
         if command == "approve": q.add_argument("--note", required=True)
         q.set_defaults(func=func)
-    q = sub.add_parser("upgrade", help="Install v0.3 framework files without overwriting customizations")
-    q.add_argument("--project", default=".")
-    q.add_argument("--adapter", choices=("codex","claude","copilot","all"), default="all")
-    q.set_defaults(func=upgrade)
     q = sub.add_parser("feature", help="Start a feature specification package")
     q.add_argument("slug"); q.add_argument("--project", default=".")
     q.set_defaults(func=feature)
-    from .agent_cli import attach
-    from .session_cli import attach as attach_sessions
-    attach(sub)
-    attach_sessions(sub)
     args = parser.parse_args(argv)
     try:
         result = args.func(args)

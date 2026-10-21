@@ -1,12 +1,12 @@
 # UASEF — Universal AI Software Engineering Framework
 
-**Version 0.3.0 · reusable Agent Skills + durable orchestration + portable sessions and routing**
+**Version 0.1.0 · reusable Agent Skills + professional engineering processes + small auditable CLI**
 
 UASEF starts with an idea, coordinates role-specific AI work through portable skills and versioned specifications, evaluates buy/adopt/build and technology choices, and moves from MVP delivery toward evidence-based production evolution. It intentionally does **not** impose JavaScript, Rust, React, SQL or any other stack.
 
-**What is implemented now:** 26 open-format Agent Skills, 13 specialist role contracts, 16 project-initiation tasks with 4 human-recorded approvals, 10 additional workflow playbooks, project-ready document templates, decision/quality/security policies, a cross-provider adapter exporter, CLI state machine, handoff generator and unit tests.
+**What is implemented now:** 20 open-format Agent Skills, 13 specialist role contracts, 16 project-initiation tasks with 4 human-recorded approvals, 10 additional workflow playbooks, project-ready document templates, decision/quality/security policies, a cross-provider adapter exporter, CLI state machine, handoff generator and unit tests.
 
-**What is not implemented:** authenticated approvals, autonomous third-party research, managed cloud deployments, built-in AI model SDKs, hardened process sandboxing or semantic validation of generated documents. v0.2 executes user-configured external AI CLIs, optionally in Git worktrees, and separates runner success from verified completion. Hook these into your chosen coding agent and CI/hosting environment. A generated readiness file does not prove a system is safe or production ready.
+**What is not implemented:** autonomous multi-agent scheduling, authenticated approvals, third-party research automation, cloud deployments, code generation, or semantic validation of generated documents. Hook these into your chosen coding agent and CI/hosting environment. A generated readiness file does not prove a system is safe or production ready.
 
 ## Quick start (Windows PowerShell, Linux, macOS)
 
@@ -49,35 +49,6 @@ uasef init . --existing          # safely add to existing project; no clobber
 
 You can execute the CLI from any directory using `--project /path/to/project`.
 
-
-## v0.3: Persistent Sessions, Delegation and Model Routing
-
-`uasef session start --task API-001 --name "Architecture investigation"` creates an auditable session. Use `uasef session checkpoint <id> --message "..." --evidence docs/review.md` to persist explicit knowledge, and `uasef session handoff <id>` to export a portable Markdown handoff for any model. `uasef dispatch API-001 --session <id>` injects this handoff into the scoped task prompt without claiming private model memory is transferable.
-
-`uasef task delegate API-TEST --parent API-001 --role qa-engineer --skill quality-verification --title "Verify endpoint" --acceptance "Automated integration tests pass"` creates an explicit child task. Parents cannot pass review while delegated children are incomplete.
-
-`uasef route --task API-001` explains role/skill-aware runner choices from `.uasef/runners.json`. `uasef dispatch API-001 --profile auto` previews the first eligible configured runner; `--execute` remains explicit and no provider fallback occurs after side effects may have begun. See **[v0.3 docs](docs/SESSIONS-AND-ROUTING.md)**.
-
-## v0.2: Agent Execution and Orchestration
-
-New commands add **transactional SQLite task state**, DAG dependencies, review/approval gates, audit events, run logs, time-limited leases and recovery. Default `manual` mode prepares prompts only; actual execution requires configuring an external CLI and passing `--execute`. **A model does not automatically get shell or deployment access.**
-
-```bash
-# After initialization, inside a UASEF project
-uasef task add API-001 --title "Health endpoint" --role backend-engineer \
-  --skill feature-implementation --acceptance "Endpoint returns 200 and tests pass"
-uasef task list
-uasef dispatch API-001 --profile manual
-# Optional, once a reviewed subprocess runner has been configured:
-uasef dispatch API-001 --profile my-agent --execute --worktree
-# After actual code/test review and a saved evidence report:
-uasef task verify API-001 --reviewer qa-reviewer --evidence docs/evidence/review.md
-```
-
-For projects already initialized with v0.1, use `uasef upgrade --project /path/to/project --adapter all` to install missing v0.2 files without overwriting customizations.
-
-Read **[docs/ORCHESTRATION.md](docs/ORCHESTRATION.md)** for runner configuration, independent review, parallel dispatch, approval and recovery. A successful CLI exit does not prove correctness or replace your permission controls.
-
 ## Using with different AI tools
 
 | Tool | Generated location | Notes |
@@ -118,7 +89,7 @@ Full INIT-001 to INIT-016 definitions are in `workflows/inception.json` and `doc
 ## Design decisions and security
 
 - Everything works offline for framework and local task management. External research itself requires enabled web access from the chosen agent and must cite evidence.
-- Inception state remains a mutable JSON file (do not edit concurrently); execution tasks use transactional SQLite with task leases, dependencies and audit records.
+- Task state is a mutable JSON file for portability; avoid concurrent CLI writes. For multi-worker orchestration replace it with transactional task state and locking.
 - Skills are *instructions* and not security sandboxes. Never grant autonomous production credentials merely because an agent role sounds trustworthy.
 - Template completeness is checked structurally (`TODO:` detection), **not semantically**. Human/agent peer review and runnable tests remain mandatory.
 - Editable install or running from the source checkout is required; this repository does not yet publish a standalone wheel with bundled resource data.
@@ -132,7 +103,3 @@ python -m unittest discover -s tests -v
 See `docs/USAGE.md` for a full walkthrough, `docs/AGENT-COMPATIBILITY.md` for adapter details, and `docs/LIMITATIONS.md` for the exact automation boundary.
 
 License: MIT. See `LICENSE`.
-
-## Publishing to GitHub
-
-This distribution is Git-ready but has no remote by default. Follow [docs/GITHUB-PUBLISH.md](docs/GITHUB-PUBLISH.md) to create an empty repository and push safely. Never push a project to an unrelated existing repository.
