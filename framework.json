@@ -1,6 +1,6 @@
 {
   "name": "UASEF",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "methodology": "research-evaluate-decide-specify-implement-verify-learn",
   "inception_workflow": "workflows/inception.json",
   "portable_skill_directory": "skills",

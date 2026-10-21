@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 — Session Memory, Delegation, and Model Routing
+
+- Added persistent task-linked sessions, checkpoints, event history and portable handoff exports.
+- Added explicit parent/child task delegation with depth limits and parent review/approval barriers.
+- Added deterministic, explainable role/skill-aware routing across installed external CLI profiles.
+- Preserved opt-in execution, verification gates, SQLite audit history, and v0.2 task migrations.
+- Added routing, session, and delegation skills, user guide and regression tests.
+- No direct cloud model SDK, authenticated human approval, hardened sandbox or automatic provider fallback.
+
+
 ## 0.2.0 — Agent Execution and Orchestration
 
 - Added SQLite-backed execution task DAG with atomic claims and audit history.

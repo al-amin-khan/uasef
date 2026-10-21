@@ -1,10 +1,10 @@
 # UASEF — Universal AI Software Engineering Framework
 
-**Version 0.2.0 · role-based Agent Skills + project inception + transactional local orchestration**
+**Version 0.3.0 · reusable Agent Skills + durable orchestration + portable sessions and routing**
 
 UASEF starts with an idea, coordinates role-specific AI work through portable skills and versioned specifications, evaluates buy/adopt/build and technology choices, and moves from MVP delivery toward evidence-based production evolution. It intentionally does **not** impose JavaScript, Rust, React, SQL or any other stack.
 
-**What is implemented now:** 23 open-format Agent Skills, 13 specialist role contracts, 16 project-initiation tasks with 4 human-recorded approvals, 10 additional workflow playbooks, project-ready document templates, decision/quality/security policies, a cross-provider adapter exporter, CLI state machine, handoff generator and unit tests.
+**What is implemented now:** 26 open-format Agent Skills, 13 specialist role contracts, 16 project-initiation tasks with 4 human-recorded approvals, 10 additional workflow playbooks, project-ready document templates, decision/quality/security policies, a cross-provider adapter exporter, CLI state machine, handoff generator and unit tests.
 
 **What is not implemented:** authenticated approvals, autonomous third-party research, managed cloud deployments, built-in AI model SDKs, hardened process sandboxing or semantic validation of generated documents. v0.2 executes user-configured external AI CLIs, optionally in Git worktrees, and separates runner success from verified completion. Hook these into your chosen coding agent and CI/hosting environment. A generated readiness file does not prove a system is safe or production ready.
 
@@ -49,6 +49,14 @@ uasef init . --existing          # safely add to existing project; no clobber
 
 You can execute the CLI from any directory using `--project /path/to/project`.
 
+
+## v0.3: Persistent Sessions, Delegation and Model Routing
+
+`uasef session start --task API-001 --name "Architecture investigation"` creates an auditable session. Use `uasef session checkpoint <id> --message "..." --evidence docs/review.md` to persist explicit knowledge, and `uasef session handoff <id>` to export a portable Markdown handoff for any model. `uasef dispatch API-001 --session <id>` injects this handoff into the scoped task prompt without claiming private model memory is transferable.
+
+`uasef task delegate API-TEST --parent API-001 --role qa-engineer --skill quality-verification --title "Verify endpoint" --acceptance "Automated integration tests pass"` creates an explicit child task. Parents cannot pass review while delegated children are incomplete.
+
+`uasef route --task API-001` explains role/skill-aware runner choices from `.uasef/runners.json`. `uasef dispatch API-001 --profile auto` previews the first eligible configured runner; `--execute` remains explicit and no provider fallback occurs after side effects may have begun. See **[v0.3 docs](docs/SESSIONS-AND-ROUTING.md)**.
 
 ## v0.2: Agent Execution and Orchestration
 

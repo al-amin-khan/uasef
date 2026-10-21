@@ -48,6 +48,7 @@ def db(project):
       status TEXT NOT NULL DEFAULT 'queued',
       lease_token TEXT, lease_until TEXT, attempts INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      parent_id TEXT REFERENCES tasks(id),
       CHECK (status IN ('queued','running','awaiting_review','awaiting_approval',
                         'completed','failed','cancelled'))
     );
@@ -57,12 +58,26 @@ def db(project):
       exit_code INTEGER, status TEXT NOT NULL, prompt_path TEXT,
       log_path TEXT, workspace TEXT, error TEXT
     );
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES tasks(id),
+      name TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('active','closed')),
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS session_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL REFERENCES sessions(id),
+      kind TEXT NOT NULL, actor TEXT NOT NULL, message TEXT NOT NULL,
+      evidence TEXT NOT NULL DEFAULT '[]', at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS audit (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       at TEXT NOT NULL, task_id TEXT NOT NULL REFERENCES tasks(id),
       event TEXT NOT NULL, actor TEXT NOT NULL, detail TEXT NOT NULL
     );
     """)
+    # Upgrade pre-v0.3 databases without touching task history.
+    if "parent_id" not in {row["name"] for row in conn.execute("PRAGMA table_info(tasks)")}:
+        conn.execute("ALTER TABLE tasks ADD COLUMN parent_id TEXT REFERENCES tasks(id)")
     try:
         yield conn
     finally:
@@ -92,7 +107,7 @@ def list_tasks(conn):
     return [as_dict(x) for x in conn.execute("SELECT * FROM tasks ORDER BY created_at,id")]
 
 
-def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(), context=(), approval=False):
+def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(), context=(), approval=False, parent_id=None):
     if not TASK_ID.fullmatch(task_id) or len(task_id) > 80:
         raise ValueError("Task ID must be uppercase alphanumeric with hyphens (e.g. API-001)")
     if not title.strip() or not acceptance.strip():
@@ -105,6 +120,18 @@ def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(),
     depends, context = list(dict.fromkeys(depends)), list(dict.fromkeys(context))
     if task_id in depends:
         raise ValueError("Task may not depend on itself")
+    if parent_id is not None:
+        if parent_id == task_id:
+            raise ValueError("A task cannot delegate to itself")
+        parent = task(conn, parent_id)
+        if parent["status"] in TERMINAL:
+            raise ValueError("Cannot delegate from a closed task")
+        depth, ancestor = 0, parent
+        while ancestor["parent_id"] is not None:
+            depth += 1
+            ancestor = task(conn, ancestor["parent_id"])
+        if depth >= 3:
+            raise ValueError("Delegation depth limit of 3 exceeded")
     for d in depends:
         task(conn, d)  # existing-task-only dependencies prevent cycles
     from .executor import safe_document
@@ -113,9 +140,11 @@ def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(),
     t = timestamp()
     try:
         with conn:
-            conn.execute("INSERT INTO tasks(id,title,role,skill,acceptance,context_paths,dependencies,needs_approval,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                         (task_id,title,role,skill,acceptance,json.dumps(context),json.dumps(depends),int(approval),t,t))
-            audit(conn, task_id, "created", detail=f"depends={depends}; approval={approval}")
+            conn.execute("INSERT INTO tasks(id,title,role,skill,acceptance,context_paths,dependencies,needs_approval,created_at,updated_at,parent_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                         (task_id,title,role,skill,acceptance,json.dumps(context),json.dumps(depends),int(approval),t,t,parent_id))
+            audit(conn, task_id, "created", detail=f"depends={depends}; approval={approval}; parent={parent_id}")
+            if parent_id:
+                audit(conn, parent_id, "delegated", detail=f"child={task_id}; role={role}")
     except sqlite3.IntegrityError as e:
         raise ValueError(f"Task already exists or violates constraints: {task_id}") from e
     return task(conn, task_id)
@@ -175,6 +204,10 @@ def finish_run(conn, task_id, run_id, token, exit_code, prompt_path, log_path, w
         raise
 
 
+def incomplete_children(conn, task_id):
+    return [r["id"] for r in conn.execute("SELECT id FROM tasks WHERE parent_id=? AND status != 'completed' ORDER BY id", (task_id,))]
+
+
 def verify(conn, project, task_id, reviewer, evidence):
     if not reviewer.strip() or reviewer.strip().lower() == "agent":
         raise ValueError("Specify the named reviewer; this is a local assertion, not authenticated")
@@ -189,6 +222,9 @@ def verify(conn, project, task_id, reviewer, evidence):
         t = task(conn,task_id)
         if t["status"] != "awaiting_review":
             raise ValueError("Task must be awaiting_review")
+        remaining = incomplete_children(conn, task_id)
+        if remaining:
+            raise ValueError(f"Delegated tasks must complete before parent review: {', '.join(remaining)}")
         last = conn.execute("SELECT profile FROM runs WHERE task_id=? ORDER BY started_at DESC,id DESC LIMIT 1",(task_id,)).fetchone()
         manual = conn.execute("SELECT actor FROM audit WHERE task_id=? AND event='manual_submitted' ORDER BY id DESC LIMIT 1",(task_id,)).fetchone()
         if (last and reviewer.casefold() == last["profile"].casefold()) or (manual and reviewer.casefold() == manual["actor"].casefold()):
@@ -234,6 +270,9 @@ def approve(conn, task_id, actor, note):
         t = task(conn,task_id)
         if t["status"] != "awaiting_approval":
             raise ValueError("Only reviewed approval-gated tasks can be approved")
+        remaining = incomplete_children(conn, task_id)
+        if remaining:
+            raise ValueError(f"Delegated tasks still incomplete: {', '.join(remaining)}")
         conn.execute("UPDATE tasks SET status='completed',updated_at=? WHERE id=?",(timestamp(),task_id))
         audit(conn,task_id,"approved",actor=actor,detail=note)
         conn.commit()

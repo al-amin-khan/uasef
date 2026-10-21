@@ -13,7 +13,7 @@ import re
 import shutil
 import sys
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 TASK_RE = re.compile(r"^INIT-0(?:0[1-9]|1[0-6])$")
 SLUG_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 SKILL_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -170,17 +170,17 @@ def init(args):
     log(state, "init", note=f"adapter={args.adapter}")
     # Execution state is project-local and deliberately excluded from Git by default.
     write_if_missing(p / ".uasef" / "runners.json", (root / "templates" / "runners.json").read_text(encoding="utf-8"))
-    write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\n")
+    write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\n")
     save(p, state)
     print(f"Initialized {name} at {p}\nStart with: uasef next --project {p}")
 
 
 def upgrade(args):
-    """Install only missing v0.2 tools into an existing v0.1 project."""
+    """Install missing tools into an existing supported project without clobbering."""
     root = framework_root()
     p = Path(args.project).resolve()
     state = load(p)
-    if state.get("framework_version") not in ("0.1.0", "0.2.0"):
+    if state.get("framework_version") not in ("0.1.0", "0.2.0", "0.3.0"):
         raise ValueError("Unsupported source framework version; review upgrade manually")
     for policy in (root / "policies").glob("*.md"):
         copy_if_missing(policy, p / ".uasef" / "policies" / policy.name)
@@ -190,7 +190,10 @@ def upgrade(args):
     if args.adapter != "codex":
         install_adapter(root,p,args.adapter)
     write_if_missing(p / ".uasef" / "runners.json", (root / "templates" / "runners.json").read_text(encoding="utf-8"))
-    write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\n")
+    write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\n")
+    ignored=p / ".uasef" / ".gitignore"
+    if "sessions/" not in ignored.read_text(encoding="utf-8").splitlines():
+        with ignored.open("a", encoding="utf-8") as f: f.write("\nsessions/\n")
     state["framework_version"] = VERSION
     log(state, "framework_upgrade", note="New files copied without replacing customized agent instructions")
     save(p,state)
@@ -370,7 +373,7 @@ def main(argv=None):
         if command == "complete": q.add_argument("--evidence", action="append")
         if command == "approve": q.add_argument("--note", required=True)
         q.set_defaults(func=func)
-    q = sub.add_parser("upgrade", help="Install new framework files into a v0.1/v0.2 project without overwriting customizations")
+    q = sub.add_parser("upgrade", help="Install v0.3 framework files without overwriting customizations")
     q.add_argument("--project", default=".")
     q.add_argument("--adapter", choices=("codex","claude","copilot","all"), default="all")
     q.set_defaults(func=upgrade)
@@ -378,7 +381,9 @@ def main(argv=None):
     q.add_argument("slug"); q.add_argument("--project", default=".")
     q.set_defaults(func=feature)
     from .agent_cli import attach
+    from .session_cli import attach as attach_sessions
     attach(sub)
+    attach_sessions(sub)
     args = parser.parse_args(argv)
     try:
         result = args.func(args)

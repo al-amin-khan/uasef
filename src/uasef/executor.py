@@ -65,12 +65,16 @@ def build_prompt(project, task):
             "# Authoritative context\n" + "\n".join(docs))
 
 
-def load_profiles(project):
+def load_runner_config(project):
     path = Path(project).resolve() / ".uasef" / "runners.json"
     result = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"profiles":{"manual":{"type":"manual"}}}
     if not isinstance(result,dict) or not isinstance(result.get("profiles"),dict):
         raise ValueError("Invalid runners.json: expected profiles object")
-    return result["profiles"]
+    return result
+
+
+def load_profiles(project):
+    return load_runner_config(project)["profiles"]
 
 
 def prepare(project, task, run_id="preview"):

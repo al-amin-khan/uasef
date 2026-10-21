@@ -1,5 +1,9 @@
 {
   "profiles": {
     "manual": {"type": "manual"}
+  },
+  "routing": {
+    "defaults": [],
+    "by_role": {}
   }
 }

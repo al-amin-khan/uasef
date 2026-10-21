@@ -12,7 +12,7 @@ from . import orchestrator as orch
 def add(args):
     with orch.db(args.project) as conn:
         t = orch.add_task(conn,args.project,args.id,args.title,args.role,args.skill,
-                          args.acceptance,args.depends,args.context,args.approval_required)
+                          args.acceptance,args.depends,args.context,args.approval_required,args.parent)
     print(f"Created {t['id']} [{t['status']}] role={t['role']} skill={t['skill']}")
 
 
@@ -71,34 +71,72 @@ def profiles(args):
         print(f"{k:20} {v.get('type','INVALID')}")
 
 
-def _dispatch(project, task_id, profile_name, execute, worktree=False):
+def tree(args):
+    with orch.db(args.project) as conn:
+        tasks=orch.list_tasks(conn)
+    def walk(parent,depth=0):
+        for t in tasks:
+            if t["parent_id"] == parent:
+                print("  "*depth+f"{t['id']} [{t['status']}] {t['title']}")
+                walk(t["id"],depth+1)
+    walk(None)
+
+
+def _dispatch(project, task_id, profile_name, execute, worktree=False, session_id=None):
     root=Path(project).resolve()
-    settings=ex.load_profiles(root)
+    from . import routing, sessions
+    config=ex.load_runner_config(root)
+    settings=config["profiles"]
+    with orch.db(root) as conn:
+        t=orch.task(conn,task_id)
+        if session_id is not None:
+            active=sessions.session(conn,session_id)
+            if active["status"] != "active" or active["task_id"] != task_id:
+                raise ValueError("Session must be active and belong to this task")
+    if profile_name == "auto":
+        profile_name=routing.select(config,t)
     if profile_name not in settings:
         raise ValueError(f"Unknown runner profile '{profile_name}'; configure .uasef/runners.json")
     profile=settings[profile_name]
     if not isinstance(profile,dict):
         raise ValueError("Invalid runner profile")
+    if profile.get("enabled",True) is not True:
+        raise ValueError("Runner profile is disabled")
+    if profile.get("roles") is not None and t["role"] not in profile["roles"]:
+        raise ValueError("Runner profile does not permit this role")
+    if profile.get("skills") is not None and t["skill"] not in profile["skills"]:
+        raise ValueError("Runner profile does not permit this skill")
     with orch.db(root) as conn:
-        t=orch.task(conn,task_id)
         if not orch.eligible(conn,t):
             raise ValueError(f"Task {task_id} is not ready")
         # Prevalidate context and command before claiming the task.
         ex.build_prompt(root,t)
         if profile.get("type") == "manual":
+            if execute:
+                raise ValueError("Manual mode cannot --execute")
             prompt=ex.prepare(root,t,f"manual-{task_id.lower()}")
+            if session_id:
+                with prompt.open("a",encoding="utf-8") as file:file.write("\n\n"+sessions.context(conn,session_id))
             return f"Manual prompt prepared: {prompt}. Task remains queued; agent work is not verified automatically."
         if not execute:
             prompt=ex.prepare(root,t,f"preview-{task_id.lower()}")
-            return f"Dry run only. Prompt: {prompt}. Use --execute to opt into subprocess execution."
+            if session_id:
+                with prompt.open("a",encoding="utf-8") as file:file.write("\n\n"+sessions.context(conn,session_id))
+            return f"Dry run only. Selected {profile_name}; prompt: {prompt}. Use --execute to opt into subprocess execution."
         timeout = ex.validate_profile(profile)
         run_id,token=orch.claim(conn,task_id,profile_name,lease_seconds=timeout+120)
-    prompt_path=ex.prepare(root,t,run_id)
+    prompt_path=root / ".uasef" / "runs" / run_id / "prompt.md"
     log_path=prompt_path.parent / "runner.log"
     workspace=root
     code=127
     err=""
     try:
+        prompt_path=ex.prepare(root,t,run_id)
+        if session_id:
+            with orch.db(root) as conn:
+                with prompt_path.open("a",encoding="utf-8") as file:
+                    file.write("\n\n"+sessions.context(conn,session_id))
+                sessions.record(conn,root,session_id,"runner_started",profile_name,f"Runner started; run={run_id}")
         if worktree:
             workspace=ex.make_worktree(root,task_id,run_id)
         code,err=ex.execute(root,profile_name,profile,prompt_path,log_path,workspace,task_id)
@@ -106,13 +144,20 @@ def _dispatch(project, task_id, profile_name, execute, worktree=False):
         err=f"Dispatch error: {type(exc).__name__}: {exc}"
     with orch.db(root) as conn:
         result=orch.finish_run(conn,task_id,run_id,token,code,prompt_path,log_path,workspace,err)
+        if session_id:
+            try:
+                sessions.record(conn,root,session_id,"runner_finished",profile_name,f"Runner {run_id}: exit={code}, status={result}; inspect run logs")
+            except ValueError:
+                # A session can be closed while an external process is running.
+                # Its task/run outcome is still persisted in authoritative execution state.
+                pass
     return (f"Task {task_id}: {result}; run={run_id}; exit={code}; workspace={workspace}; log={log_path}. "
             + (f"Error: {err}. " if err else "")
             + ("Requires independent review and test evidence before completion." if code==0 else "Inspect logs, then use 'uasef task retry' if appropriate."))
 
 
 def dispatch(args):
-    print(_dispatch(args.project,args.id,args.profile,args.execute,args.worktree))
+    print(_dispatch(args.project,args.id,args.profile,args.execute,args.worktree,args.session))
 
 
 def dispatch_ready(args):
@@ -144,8 +189,15 @@ def attach(sub):
     q.add_argument("--depends",action="append",default=[])
     q.add_argument("--context",action="append",default=[])
     q.add_argument("--approval-required",action="store_true")
+    q.add_argument("--parent",help="Delegating parent task; child must complete before parent review")
     q.set_defaults(func=add)
-    for name,fn in (("list",status),("show",details),("verify",verify),("submit",submit),("approve",approve),("retry",retry),("recover",recover)):
+    q=actions.add_parser("delegate",help="Create a scoped child task under a parent")
+    q.add_argument("id");q.add_argument("--parent",required=True);q.add_argument("--title",required=True)
+    q.add_argument("--role",required=True);q.add_argument("--skill",required=True)
+    q.add_argument("--acceptance",required=True);q.add_argument("--depends",action="append",default=[])
+    q.add_argument("--context",action="append",default=[]);q.add_argument("--approval-required",action="store_true")
+    q.set_defaults(func=add)
+    for name,fn in (("list",status),("tree",tree),("show",details),("verify",verify),("submit",submit),("approve",approve),("retry",retry),("recover",recover)):
         q=actions.add_parser(name)
         if name in ("show","verify","submit","approve","retry"):q.add_argument("id")
         if name=="verify":
@@ -166,6 +218,7 @@ def attach(sub):
             q.add_argument("--jobs",type=int,default=1)
         q.add_argument("--profile",default="manual");q.add_argument("--execute",action="store_true")
         q.add_argument("--worktree",action="store_true");q.add_argument("--project",default=".")
+        if name == "dispatch": q.add_argument("--session",help="Active session ID for checkpoint context")
         q.set_defaults(func=fn)
     q=sub.add_parser("runners",help="List installed runner profiles")
     q.add_argument("--project",default=".");q.set_defaults(func=profiles)

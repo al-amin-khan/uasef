@@ -38,5 +38,5 @@ class UpgradeTests(unittest.TestCase):
             self.assertEqual(run('upgrade','--project',str(p)),0)
             self.assertEqual(role.read_text(),'custom role retained')
             self.assertTrue((p/'.agents/skills/agent-task-orchestration/SKILL.md').exists())
-            self.assertEqual(cli.load(p)['framework_version'],'0.2.0')
+            self.assertEqual(cli.load(p)['framework_version'],cli.VERSION)
             self.assertEqual(run('upgrade','--project',str(p)),0)
