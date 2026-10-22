@@ -124,6 +124,9 @@ def _dispatch(project, task_id, profile_name, execute, worktree=False, session_i
                 with prompt.open("a",encoding="utf-8") as file:file.write("\n\n"+sessions.context(conn,session_id))
             return f"Dry run only. Selected {profile_name}; prompt: {prompt}. Use --execute to opt into subprocess execution."
         timeout = ex.validate_profile(profile)
+        if profile["type"] == "opencode":
+            from .opencode import ensure_installed
+            ensure_installed(profile)
         run_id,token=orch.claim(conn,task_id,profile_name,lease_seconds=timeout+120)
     prompt_path=root / ".uasef" / "runs" / run_id / "prompt.md"
     log_path=prompt_path.parent / "runner.log"
@@ -180,6 +183,32 @@ def dispatch_ready(args):
                 print(f.result())
 
 
+
+def opencode_doctor(args):
+    import subprocess
+    from .opencode import ensure_installed
+    config=ex.load_runner_config(args.project)
+    profile=config["profiles"].get(args.profile)
+    if not isinstance(profile,dict) or profile.get("type") != "opencode":
+        raise ValueError("Select an OpenCode runner profile in .uasef/runners.json")
+    ex.validate_profile(profile)
+    ensure_installed(profile)
+    cmd=list(profile["argv"])
+    for flags in (["--version"], ["run", "--help"]):
+        try:
+            result=subprocess.run(cmd+flags, capture_output=True,text=True,timeout=15,check=False)
+        except subprocess.TimeoutExpired:
+            raise ValueError("OpenCode diagnostic timed out") from None
+        if result.returncode:
+            raise ValueError(f"OpenCode diagnostic failed: {' '.join(flags)}: {result.stderr[-300:]}")
+        if flags == ["run", "--help"]:
+            missing=[flag for flag in ("--file","--format","--agent") if flag not in result.stdout]
+            if missing:
+                raise ValueError("OpenCode CLI lacks required run options: " + ", ".join(missing))
+        else:
+            print("OpenCode version: " + result.stdout.strip())
+    print("OpenCode CLI flags verified. Authentication, permissions, model access and live execution NOT verified.")
+
 def attach(sub):
     tasks=sub.add_parser("task",help="v0.2 durable agent execution tasks")
     actions=tasks.add_subparsers(dest="task_action",required=True)
@@ -220,5 +249,10 @@ def attach(sub):
         q.add_argument("--worktree",action="store_true");q.add_argument("--project",default=".")
         if name == "dispatch": q.add_argument("--session",help="Active session ID for checkpoint context")
         q.set_defaults(func=fn)
+    q=sub.add_parser("opencode",help="OpenCode CLI diagnostics (does not invoke a model)")
+    commands=q.add_subparsers(dest="opencode_action",required=True)
+    d=commands.add_parser("doctor")
+    d.add_argument("--profile",default="opencode");d.add_argument("--project",default=".")
+    d.set_defaults(func=opencode_doctor)
     q=sub.add_parser("runners",help="List installed runner profiles")
     q.add_argument("--project",default=".");q.set_defaults(func=profiles)

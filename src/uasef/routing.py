@@ -30,8 +30,8 @@ def evaluate(config, task):
             raise ValueError("Routing entries must be profile names")
         p = profiles.get(name)
         reason = None
-        if not isinstance(p, dict) or p.get("type") != "subprocess":
-            reason = "not a configured subprocess profile"
+        if not isinstance(p, dict) or p.get("type") not in ("subprocess", "opencode"):
+            reason = "not a configured executable runner"
         elif p.get("enabled", True) is not True:
             reason = "profile disabled"
         elif p.get("roles") is not None and task["role"] not in p["roles"]:

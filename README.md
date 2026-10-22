@@ -1,6 +1,6 @@
 # UASEF — Universal AI Software Engineering Framework
 
-**Version 0.3.0 · reusable Agent Skills + durable orchestration + portable sessions and routing**
+**Version 0.3.0 + OpenCode integration (development) · reusable Agent Skills + durable orchestration + portable sessions and routing**
 
 UASEF starts with an idea, coordinates role-specific AI work through portable skills and versioned specifications, evaluates buy/adopt/build and technology choices, and moves from MVP delivery toward evidence-based production evolution. It intentionally does **not** impose JavaScript, Rust, React, SQL or any other stack.
 
@@ -50,6 +50,17 @@ uasef init . --existing          # safely add to existing project; no clobber
 You can execute the CLI from any directory using `--project /path/to/project`.
 
 
+## OpenCode CLI integration (experimental)
+
+Use `uasef init ./my-project --adapter opencode` to export specialist agents to
+`.opencode/agents/` (canonical `.agents/skills/` are discovered automatically).
+Configure an opt-in `type: opencode` profile in `.uasef/runners.json` using
+[`examples/runners.opencode.json`](examples/runners.opencode.json), then run
+`uasef opencode doctor --project ./my-project` and dispatch with
+`--profile opencode --execute`. Full instructions and limitations:
+[docs/OPENCODE.md](docs/OPENCODE.md). Real OpenCode model execution is not
+part of the mock-based CI suite.
+
 ## v0.3: Persistent Sessions, Delegation and Model Routing
 
 `uasef session start --task API-001 --name "Architecture investigation"` creates an auditable session. Use `uasef session checkpoint <id> --message "..." --evidence docs/review.md` to persist explicit knowledge, and `uasef session handoff <id>` to export a portable Markdown handoff for any model. `uasef dispatch API-001 --session <id>` injects this handoff into the scoped task prompt without claiming private model memory is transferable.
@@ -85,6 +96,7 @@ Read **[docs/ORCHESTRATION.md](docs/ORCHESTRATION.md)** for runner configuration
 | Codex and Agent Skills-compatible tools | `.agents/skills/<skill>/SKILL.md` | Role contracts at `.uasef/roles/`; read `AGENTS.md`. |
 | Claude Code | `.claude/skills/<skill>/SKILL.md`, `CLAUDE.md` | Native skills discovered by skill metadata; activate desired role in your prompt. |
 | GitHub Copilot / VS Code | `.github/agents/<role>.agent.md`, `.github/copilot-instructions.md` | Exposes explicit custom agent role profiles; skills may need supported VS Code configuration. |
+| OpenCode | `.agents/skills/`, `.opencode/agents/`, `AGENTS.md` | Native skill discovery and opt-in CLI runner; review permissions before execution. |
 | Other agents/models | `.agents/skills/`, `.uasef/roles/`, `AGENTS.md` | Load files explicitly; no shared hidden model memory assumed. |
 
 The `--adapter all` option *copies* skills into each tool's discovery path for portability. These copies can diverge after edits: edit canonical skills in the framework and review updates manually. The CLI deliberately avoids overwriting local customized files.
