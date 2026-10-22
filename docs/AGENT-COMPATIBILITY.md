@@ -10,3 +10,5 @@ Agent Skills spec: https://agentskills.io/specification. Skills use exact direct
 Skill loading, tool permissions, prompt priority, subagents and execution semantics differ between providers. 'Model agnostic' means *portable documented work*, not identical tool capabilities or direct sharing of a model's private thoughts.
 
 Known portability caveat: tooling may ignore portable skills without an enabled loader; file copies can become stale if edited in only one location. Review local files and avoid running unknown third-party skills with privileged tools.
+
+- OpenCode discovers `.agents/skills` natively; `--adapter opencode` generates `.opencode/agents` role profiles. See [OPENCODE.md](OPENCODE.md) for opt-in runner integration and limitations.

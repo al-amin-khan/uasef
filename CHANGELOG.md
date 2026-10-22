@@ -1,3 +1,9 @@
+## Unreleased — OpenCode CLI integration
+
+- Native opt-in OpenCode subprocess adapter using documented `run --file --format json` interface.
+- OpenCode role exporter, diagnostics, explicit environment allowlist, NDJSON event/error summary.
+- Mock integration tests and OpenCode usage/security documentation; live CLI/model execution not verified.
+
 # Changelog
 
 ## 0.3.0 — Session Memory, Delegation, and Model Routing

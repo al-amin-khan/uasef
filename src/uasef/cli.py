@@ -109,6 +109,14 @@ def install_adapter(root, project, adapter):
                     if asset.is_file():
                         copy_if_missing(asset, project / ".claude" / "skills" / skill.name / asset.relative_to(skill))
         write_if_missing(project / "CLAUDE.md", "# Agent instructions\n\nRead [AGENTS.md](AGENTS.md), follow framework policies, and use project-local skills.\n")
+    if adapter in ("opencode", "all"):
+        # OpenCode already discovers the canonical .agents/skills directory.
+        # Do not duplicate skills into .opencode/skills and create precedence drift.
+        for role in sorted((root / "agents").glob("*.md")):
+            description = f"UASEF {role.stem.replace('-', ' ')} specialist; follow project governance and review gates."
+            frontmatter = "---\n" + f"description: {json.dumps(description)}\nmode: subagent\n---\n\n"
+            write_if_missing(project / ".opencode" / "agents" / role.name,
+                             frontmatter + role.read_text(encoding="utf-8"))
     if adapter in ("copilot", "all"):
         write_if_missing(project / ".github" / "copilot-instructions.md", "Follow the repository [AGENTS.md](../../AGENTS.md), specifications and UASEF policies. Do not treat skills as executable guards.\n")
         for role in sorted((root / "agents").glob("*.md")):
@@ -361,7 +369,7 @@ def main(argv=None):
     p = sub.add_parser("init", help="Initialize a project without overwriting existing files")
     p.add_argument("path"); p.add_argument("--name"); p.add_argument("--idea")
     p.add_argument("--existing", action="store_true", help="Allow an existing nonempty project; never overwrite")
-    p.add_argument("--adapter", choices=("codex", "claude", "copilot", "all"), default="all")
+    p.add_argument("--adapter", choices=("codex", "claude", "copilot", "opencode", "all"), default="all")
     p.set_defaults(func=init)
     for command, func in (("status",status),("next",next_tasks),("validate",validate),("handoff",handoff)):
         q = sub.add_parser(command)
@@ -375,7 +383,7 @@ def main(argv=None):
         q.set_defaults(func=func)
     q = sub.add_parser("upgrade", help="Install v0.3 framework files without overwriting customizations")
     q.add_argument("--project", default=".")
-    q.add_argument("--adapter", choices=("codex","claude","copilot","all"), default="all")
+    q.add_argument("--adapter", choices=("codex","claude","copilot","opencode","all"), default="all")
     q.set_defaults(func=upgrade)
     q = sub.add_parser("feature", help="Start a feature specification package")
     q.add_argument("slug"); q.add_argument("--project", default=".")

@@ -102,19 +102,34 @@ def make_worktree(project, task_id, run_id):
 
 
 def validate_profile(profile):
-    if profile.get("type") != "subprocess":
-        raise ValueError("Only opt-in subprocess profiles can execute")
+    if profile.get("type") not in ("subprocess", "opencode"):
+        raise ValueError("Only opt-in subprocess or OpenCode profiles can execute")
     argv = profile.get("argv")
     if not isinstance(argv,list) or not argv or not all(isinstance(x,str) and x and "\x00" not in x for x in argv):
         raise ValueError("Runner argv must be a nonempty array of safe string arguments")
     timeout = profile.get("timeout_seconds",600)
     if type(timeout) is not int or not 1 <= timeout <= 3600:
         raise ValueError("timeout_seconds must be an integer from 1 to 3600")
+    if profile["type"] == "opencode":
+        agent = profile.get("agent", "build")
+        model = profile.get("model")
+        if not isinstance(agent, str) or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_/-]*", agent):
+            raise ValueError("OpenCode agent must be a valid agent identifier")
+        if model is not None and (not isinstance(model, str) or
+                                  not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:#-]*", model)):
+            raise ValueError("OpenCode model must be a provider/model identifier")
+        allowed = profile.get("env_allowlist", [])
+        if not isinstance(allowed, list) or not all(isinstance(x, str) and
+            re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", x) for x in allowed):
+            raise ValueError("env_allowlist must contain environment variable names")
     return timeout
 
 
 def execute(project, profile_name, profile, prompt_path, log_path, cwd, task_id):
     timeout = validate_profile(profile)
+    if profile["type"] == "opencode":
+        from .opencode import execute_opencode
+        return execute_opencode(profile_name, profile, prompt_path, log_path, cwd, task_id, timeout)
     argv = profile["argv"]
     env = dict(os.environ)
     env.update({"UASEF_TASK_ID":task_id,"UASEF_PROMPT_FILE":str(prompt_path),"UASEF_RUN_PROFILE":profile_name})
