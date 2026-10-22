@@ -45,9 +45,11 @@ git --version
 opencode --version
 git clone https://github.com/al-amin-khan/uasef.git
 cd uasef
-py -m pip install -e .
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .
 uasef --help
-py -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 ```
 
 Install and configure OpenCode separately using the [official OpenCode documentation](https://opencode.ai/docs/). `opencode --version` only confirms the executable is present; you must configure a working model and review its tool permissions.
@@ -62,6 +64,55 @@ python3 -m unittest discover -s tests -v
 ```
 
 UASEF currently requires a source checkout/editable install because the framework resource files are not yet bundled into a standalone published wheel. **Keep the framework checkout separate from each software project.**
+
+
+### Windows: virtual environment and PATH troubleshooting
+
+The setup above installs UASEF into the checkout's `.venv`. Activation adds its Scripts folder to PATH for the current terminal. Keep that terminal open when moving into your product directory or launching OpenCode so child processes can find `uasef`.
+
+**Each new PowerShell terminal:** activate the environment again using its full path before working in a product directory (replace the example checkout path):
+
+```powershell
+& "C:\path\to\uasef\.venv\Scripts\Activate.ps1"
+uasef --help
+```
+
+**If PowerShell blocks activation**, run the environment's executables directly from the UASEF checkout; no execution-policy change is required:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\uasef.exe --help
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+To make the short `uasef` command available to subsequent walkthrough commands and agents launched from this terminal, prepend the environment's Scripts directory while still in the checkout:
+
+```powershell
+$uasefScripts = (Resolve-Path .\.venv\Scripts).Path
+$env:Path = "$uasefScripts;$env:Path"
+uasef --help
+```
+
+**If you already installed with `py -m pip install -e .` and see “uasef.exe ... is not on PATH”:** installation succeeded, but Windows cannot discover the command. Either use the virtual-environment setup above or add the **exact Scripts directory printed in pip's warning** to PATH. For example, replace this placeholder with that directory:
+
+```powershell
+$uasefScripts = "C:\path\printed\by\pip\Scripts"
+$env:Path = "$uasefScripts;$env:Path"
+uasef --help
+```
+
+This change lasts only for the current terminal. For a permanent fix to an installation outside a virtual environment, open **Edit environment variables for your account → User variables → Path → Edit → New**, add that exact Scripts directory, and save. Reopen your terminal (and its parent editor, if applicable), then run `uasef --help`. Do not replace existing PATH entries.
+
+**Check for a Python version mismatch:** your prompt may display a different Python version from the one selected by `py`:
+
+```powershell
+py -c "import sys; print(sys.executable); print(sys.version)"
+python -c "import sys; print(sys.executable); print(sys.version)"
+python -m pip --version
+Get-Command uasef
+```
+
+To select Python 3.12 explicitly when creating a **new** environment, use `py -3.12 -m venv .venv` instead of `py -m venv .venv` (Python 3.12 must be installed). After activation, use `python -m pip` and `python -m unittest` consistently. A pip upgrade notice is optional and is unrelated to command discovery.
 
 ## Complete walkthrough: from zero prompt to production
 
@@ -363,7 +414,7 @@ Paste these into a compatible coding assistant, **not** the UASEF CLI:
 
 | Symptom | Resolution |
 | --- | --- |
-| `uasef` missing | Check Python environment; install from the UASEF checkout using `python -m pip install -e .` |
+| `uasef` missing / not recognized on Windows | Activate the checkout's virtual environment or fix Scripts PATH; see [Windows troubleshooting](#windows-virtual-environment-and-path-troubleshooting) |
 | OpenCode unavailable | Install OpenCode, check `opencode --version`, then `uasef opencode doctor` |
 | Doctor passes, execution fails | Check model authentication, tool permissions and `.uasef/runs/` logs; doctor does not invoke a model |
 | Missing runner profile | Inspect `.uasef/runners.json` and choose `--profile opencode` |
