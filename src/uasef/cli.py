@@ -57,8 +57,8 @@ def load(project):
 def save(project, state):
     state["updated_at"] = now()
     write_json(state_path(project), state)
-    from .memory import sync
-    sync(project)
+    from .memory import sync_after_state_change
+    sync_after_state_change(project)
 
 
 def log(state, action, task=None, note=""):

@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import sys
 import subprocess
 import tempfile
 import uuid
@@ -40,7 +41,11 @@ def directory(project):
 
 
 def _json(path):
-    return json.loads(path.read_text(encoding="utf-8"))
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if path.name == "project.json":
+        if not isinstance(value, dict) or value.get("schema_version") != 1 or not isinstance(value.get("project_id"), str) or not re.fullmatch(r"[a-f0-9]{32}", value["project_id"]):
+            raise ValueError("Invalid project.json; restore project metadata from Git before syncing")
+    return value
 
 
 def _create(path, value):
@@ -119,11 +124,47 @@ def records(project):
     for path in sorted((base / "records").glob("MEM-*.json")):
         if path.is_symlink() or not path.resolve().is_relative_to(base.resolve()):
             raise ValueError("Unsafe memory record path")
-        row = _json(path)
-        if row.get("schema_version") != 1 or row.get("id") != path.stem or not ID_RE.fullmatch(path.stem):
-            raise ValueError(f"Invalid memory record: {path.name}")
+        try:
+            row = _json(path)
+            validate_record(row, path.stem)
+        except (ValueError, TypeError, KeyError, AttributeError) as exc:
+            raise ValueError(f"Invalid memory record: {path.name}: {exc}. Restore this file from Git or repair it, then run uasef memory sync.") from exc
         result.append(row)
     return sorted(result, key=lambda r: (r["at"], r["id"]))
+
+
+def validate_record(row, identifier):
+    if not isinstance(row, dict) or row.get("schema_version") != 1 or row.get("id") != identifier or not ID_RE.fullmatch(identifier):
+        raise ValueError("Invalid schema or ID")
+    for field in ("at", "kind", "title", "text", "actor", "claim"):
+        if not isinstance(row.get(field), str) or not row[field].strip():
+            raise ValueError(f"Missing or invalid {field}")
+    if datetime.fromisoformat(row["at"]).tzinfo is None:
+        raise ValueError("Timestamp must include timezone")
+    if row["kind"] not in KINDS or row["claim"] not in CLAIMS:
+        raise ValueError("Unknown kind or claim")
+    for field in ("task", "supersedes", "commit", "source"):
+        if field not in row or (row[field] is not None and not isinstance(row[field], str)):
+            raise ValueError(f"Invalid {field}")
+    if not isinstance(row.get("links"), list) or not all(isinstance(x, str) and ID_RE.fullmatch(x) for x in row["links"]):
+        raise ValueError("Invalid links")
+    if row["supersedes"] is not None and not ID_RE.fullmatch(row["supersedes"]):
+        raise ValueError("Invalid supersedes ID")
+    if not isinstance(row.get("data"), dict) or not isinstance(row.get("git"), dict):
+        raise ValueError("Invalid data or Git metadata")
+    if not isinstance(row.get("evidence"), list):
+        raise ValueError("Invalid evidence")
+    for proof in row["evidence"]:
+        if not isinstance(proof, dict) or not isinstance(proof.get("path"), str) or not isinstance(proof.get("sha256"), str) or not re.fullmatch(r"[a-f0-9]{64}", proof["sha256"]):
+            raise ValueError("Invalid evidence entry")
+
+
+def sync_after_state_change(project):
+    """Execution state has already been saved; report export failures separately."""
+    try:
+        sync(project)
+    except (ValueError, OSError, sqlite3.Error) as exc:
+        print(f"Warning: task state is saved, but memory export failed: {exc}", file=sys.stderr)
 
 
 def _task_exists(project, task_id):
@@ -283,6 +324,12 @@ def brief(project, task=None, limit=16):
             lines += ["  [Excerpt; read full record with memory show]"]
         if r["links"] or r["supersedes"]:
             lines += [f"  Links: {', '.join(r['links'])}; supersedes: {r['supersedes'] or '-'}"]
+    checkpoints = [r for r in active if r["kind"] == "event"
+                   and r["data"].get("kind") in ("checkpoint", "note", "session_closed")
+                   and (not task or r["task"] == task)]
+    lines += ["", "### Recent session notes and next steps (unverified declarations)"]
+    for r in checkpoints[-6:]:
+        lines.append(f"- {r['id']} [{r['at']}; {r['actor']}]: {r['text'][:600]}")
     lines += ["", "### Latest captured task states (execution state remains authoritative)"]
     visible = [r for r in tasks.values() if not task or r["task"] == task]
     for r in sorted(visible, key=lambda r: r["at"], reverse=True)[:20]:
@@ -326,11 +373,31 @@ def checkpoint(project, message, initialize_git=False):
     if Path(repo).resolve() != root:
         raise ValueError("Checkpoint requires the project root to be the Git repository root")
     sync(root)
-    relative = directory(root).relative_to(root).as_posix()
+    base = directory(root)
+    records(root)  # Reject malformed records before changing the index.
+    paths = []
+    for path in base.rglob("*"):
+        if path.is_symlink():
+            raise ValueError(f"Unexpected symlink in memory: {path.name}")
+        if path.is_dir():
+            continue
+        rel = path.relative_to(base).as_posix()
+        if rel not in ("README.md", "project.json") and not re.fullmatch(r"records/MEM-[a-f0-9]{32}\.json", rel):
+            raise ValueError(f"Unexpected file in memory: {rel}. Move it outside project-memory before checkpointing.")
+        paths.append(path.relative_to(root).as_posix())
+    if not paths:
+        raise ValueError("No memory files to checkpoint")
     # --only preserves unrelated staged changes and commits only these reviewed files.
-    git(root, "add", "--", relative, required=True)
-    changed = git(root, "diff", "--cached", "--name-only", "--", relative, required=True)
-    if not changed:
-        return "No memory changes to commit"
-    git(root, "commit", "--only", "-m", message, "--", relative, required=True)
+    fd, manifest = tempfile.mkstemp(prefix="uasef-pathspec-")
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(b"\0".join(p.encode("utf-8") for p in paths) + b"\0")
+        selection = ["--pathspec-from-file=" + manifest, "--pathspec-file-nul"]
+        git(root, "add", *selection, required=True)
+        changed = git(root, "diff", "--cached", "--name-only", "--", base.relative_to(root).as_posix(), required=True)
+        if not set(changed.splitlines()).intersection(paths):
+            return "No memory changes to commit"
+        git(root, "commit", "--only", "-m", message, *selection, required=True)
+    finally:
+        os.unlink(manifest)
     return git(root, "rev-parse", "HEAD", required=True)

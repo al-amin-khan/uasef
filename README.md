@@ -6,6 +6,9 @@
 
 ## Git-backed project memory (v0.4)
 
+Optional [Lefthook + Cocogitto setup](docs/GIT-WORKFLOW.md) is provided for staged
+whitespace checks and Conventional Commit validation. Hooks require explicit installation.
+
 UASEF now preserves project history from the original idea through requirements,
 decisions, tasks, code commits and verification evidence. Portable JSON records
 in `docs/project-memory/` travel with Git. Scoped prompts and handoffs include a
