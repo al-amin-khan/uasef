@@ -38,11 +38,14 @@ def safe_document(root, relative):
 
 def build_prompt(project, task):
     root = Path(project).resolve()
+    from .memory import sync, brief
+    sync(root)
+    memory_context = brief(root, task=task["id"])
     mandatory = ["AGENTS.md",f".uasef/roles/{task['role']}.md", f".agents/skills/{task['skill']}/SKILL.md"]
     candidates = mandatory + task["context_paths"]
     seen = set()
     docs = []
-    total = 0
+    total = len(memory_context.encode("utf-8"))
     for rel in candidates:
         if rel in seen:
             continue
@@ -62,7 +65,7 @@ def build_prompt(project, task):
             "access production without authorization, or commit secrets. "
             "Document changes, tests run, failures, and remaining work. "
             "A successful process exit is NOT verified task completion.\n\n"
-            "# Authoritative context\n" + "\n".join(docs))
+            "# Authoritative context\n" + "\n".join(docs) + "\n" + memory_context)
 
 
 def load_runner_config(project):
@@ -93,7 +96,7 @@ def make_worktree(project, task_id, run_id):
     location = project / ".uasef" / "worktrees" / task_id.lower() / run_id
     branch = f"uasef/{task_id.lower()}/{run_id[:10]}"
     location.parent.mkdir(parents=True,exist_ok=True)
-    command = ["git","-C",str(project),"worktree","add","-b",branch,str(location),"HEAD"]
+    command = ["git","-c","core.longpaths=true","-C",str(project),"worktree","add","-b",branch,str(location),"HEAD"]
     with _WORKTREE_LOCK:
         result = subprocess.run(command, capture_output=True,text=True,check=False)
     if result.returncode:

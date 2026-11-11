@@ -13,7 +13,7 @@ import re
 import shutil
 import sys
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 TASK_RE = re.compile(r"^INIT-0(?:0[1-9]|1[0-6])$")
 SLUG_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 SKILL_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -57,6 +57,8 @@ def load(project):
 def save(project, state):
     state["updated_at"] = now()
     write_json(state_path(project), state)
+    from .memory import sync_after_state_change
+    sync_after_state_change(project)
 
 
 def log(state, action, task=None, note=""):
@@ -135,6 +137,8 @@ def init(args):
         raise ValueError("Target is not empty. Pass --existing to add UASEF safely without overwriting files.")
     p.mkdir(parents=True, exist_ok=True)
     name = args.name or p.name
+    if getattr(args, "git_hooks", False):
+        copy_if_missing(root / "lefthook.yml", p / "lefthook.yml")
     idea = args.idea or "Not provided. Describe the problem during INIT-001."
     workflow = read_json(root / "workflows" / "inception.json")
     tasks = []
@@ -180,6 +184,9 @@ def init(args):
     write_if_missing(p / ".uasef" / "runners.json", (root / "templates" / "runners.json").read_text(encoding="utf-8"))
     write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\n")
     save(p, state)
+    from .memory import initialize, sync
+    initialize(p, idea)
+    sync(p)
     print(f"Initialized {name} at {p}\nStart with: uasef next --project {p}")
 
 
@@ -188,7 +195,9 @@ def upgrade(args):
     root = framework_root()
     p = Path(args.project).resolve()
     state = load(p)
-    if state.get("framework_version") not in ("0.1.0", "0.2.0", "0.3.0"):
+    if getattr(args, "git_hooks", False):
+        copy_if_missing(root / "lefthook.yml", p / "lefthook.yml")
+    if state.get("framework_version") not in ("0.1.0", "0.2.0", "0.3.0", "0.4.0"):
         raise ValueError("Unsupported source framework version; review upgrade manually")
     for policy in (root / "policies").glob("*.md"):
         copy_if_missing(policy, p / ".uasef" / "policies" / policy.name)
@@ -205,6 +214,13 @@ def upgrade(args):
     state["framework_version"] = VERSION
     log(state, "framework_upgrade", note="New files copied without replacing customized agent instructions")
     save(p,state)
+    from .memory import initialize, sync
+    initialize(p, state["idea"])
+    sync(p)
+    # Existing instructions are customized; add a dedicated discovery file only.
+    write_if_missing(p / ".uasef" / "PROJECT-MEMORY.md",
+                     "# Project memory\n\nRun `uasef memory brief` at session start. Read docs/project-memory/README.md. "
+                     "Record decisions, reasons, corrections and next steps with `uasef memory add`.\n")
     print(f"Upgraded execution tools for {p} to UASEF {VERSION}. Existing role/policy files were not overwritten; reconcile changes manually.")
 
 
@@ -340,6 +356,9 @@ def handoff(args):
                 recent = conn.execute("SELECT id,profile,status,workspace,log_path FROM runs WHERE task_id=? ORDER BY started_at DESC LIMIT 1", (item['id'],)).fetchone()
                 if recent:
                     summary.append(f"  - Last run: {recent['id']} ({recent['profile']}, {recent['status']}); workspace: {recent['workspace']}; log: {recent['log_path']}")
+    from .memory import sync, brief
+    sync(p)
+    summary.extend(["", brief(p)])
     summary.extend(["", "## Instructions for successor agent", "1. Read AGENTS.md and local policy files.",
                     "2. Verify repository HEAD, current branch, and the real files; do not trust this handoff alone.",
                     "3. Continue current or next eligible task; do not bypass approvals.",
@@ -368,6 +387,7 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("init", help="Initialize a project without overwriting existing files")
     p.add_argument("path"); p.add_argument("--name"); p.add_argument("--idea")
+    p.add_argument("--git-hooks", action="store_true", help="Copy optional Lefthook/Cocogitto configuration; never install hooks")
     p.add_argument("--existing", action="store_true", help="Allow an existing nonempty project; never overwrite")
     p.add_argument("--adapter", choices=("codex", "claude", "copilot", "opencode", "all"), default="all")
     p.set_defaults(func=init)
@@ -381,7 +401,8 @@ def main(argv=None):
         if command == "complete": q.add_argument("--evidence", action="append")
         if command == "approve": q.add_argument("--note", required=True)
         q.set_defaults(func=func)
-    q = sub.add_parser("upgrade", help="Install v0.3 framework files without overwriting customizations")
+    q = sub.add_parser("upgrade", help="Install framework files and memory without overwriting customizations")
+    q.add_argument("--git-hooks", action="store_true", help="Copy missing Lefthook configuration without replacing existing files")
     q.add_argument("--project", default=".")
     q.add_argument("--adapter", choices=("codex","claude","copilot","opencode","all"), default="all")
     q.set_defaults(func=upgrade)
@@ -390,8 +411,10 @@ def main(argv=None):
     q.set_defaults(func=feature)
     from .agent_cli import attach
     from .session_cli import attach as attach_sessions
+    from .memory_cli import attach as attach_memory
     attach(sub)
     attach_sessions(sub)
+    attach_memory(sub)
     args = parser.parse_args(argv)
     try:
         result = args.func(args)
