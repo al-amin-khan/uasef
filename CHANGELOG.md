@@ -1,10 +1,20 @@
+# Changelog
+
+## 0.4.0 - Git-backed project memory
+
+- Record ideas, requirements, decisions, preferences, findings, verification and current briefs as portable append-only JSON history.
+- Link records to each other, task IDs, existing commit SHAs and evidence hashes; preserve superseded decisions and distinguish declared, inferred and confirmed claims.
+- Automatically export inception/execution task history and explicit session checkpoints without runner logs or credentials.
+- Include bounded project memory in scoped prompts and project/session handoffs.
+- Add memory search, trace, evidence validation and explicit scoped Git checkpoint commands.
+- Upgrade existing projects without replacing customized agent instructions or older records.
+
 ## Unreleased — OpenCode CLI integration
 
 - Native opt-in OpenCode subprocess adapter using documented `run --file --format json` interface.
 - OpenCode role exporter, diagnostics, explicit environment allowlist, NDJSON event/error summary.
 - Mock integration tests and OpenCode usage/security documentation; live CLI/model execution not verified.
 
-# Changelog
 
 ## 0.3.0 — Session Memory, Delegation, and Model Routing
 

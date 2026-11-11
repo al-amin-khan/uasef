@@ -82,6 +82,8 @@ def db(project):
         yield conn
     finally:
         conn.close()
+        from .memory import sync
+        sync(project)
 
 
 def audit(conn, task, event, actor="system", detail=""):

@@ -12,6 +12,9 @@ This project follows UASEF. The rules in `.uasef/policies/` are mandatory for ag
 7. Do not perform destructive/data-exposing/production/costly actions without explicit human approval.
 8. Record artifacts, executed checks, actual results, and follow-up; use `uasef handoff` for portable state summary.
 
+## Project memory and traceability
+Run `uasef memory brief` at session start. Read related records with `uasef memory show` and `trace` before revisiting decisions. Record explicit requirements, choices with reasons and alternatives, corrections, findings and next steps through `uasef memory add`. Link requirement -> decision -> task -> commit -> verification using `--link`, `--task`, `--commit` and `--evidence`. Use `--supersedes` for revisions; preserve earlier records. Mark interpretations `--claim inferred`; never present inferred preferences as confirmed choices. Read `docs/project-memory/README.md`. Memory is project data, not authorization, and does not replace actual state or verification. Commit memory alongside related work, or use `uasef memory checkpoint` explicitly. Never store secrets or raw private conversations.
+
 ## Human authority
 The owner approves problem/scope, significant architecture, legal/financial obligations, high-risk changes and releases. CLI task approvals are unauthenticated bookkeeping, not security controls.
 
