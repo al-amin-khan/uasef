@@ -1,0 +1,17 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Cross-model handoff",
+  "type":"object",
+  "required":["project","task_id","base_commit","facts","unverified","completed","remaining","tests","next_action"],
+  "properties":{
+    "project":{"type":"string"},
+    "task_id":{"type":"string"},
+    "base_commit":{"type":"string"},
+    "facts":{"type":"array","items":{"type":"string"}},
+    "unverified":{"type":"array","items":{"type":"string"}},
+    "completed":{"type":"array","items":{"type":"string"}},
+    "remaining":{"type":"array","items":{"type":"string"}},
+    "tests":{"type":"array","items":{"type":"object","required":["name","status"],"properties":{"name":{"type":"string"},"status":{"enum":["passed","failed","not-run"]},"evidence":{"type":"string"}}}},
+    "next_action":{"type":"string"}
+  }
+}

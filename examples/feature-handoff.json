@@ -1,0 +1,11 @@
+{
+  "project": "example-product",
+  "task_id": "FEAT-023",
+  "base_commit": "REPLACE_WITH_ACTUAL_COMMIT",
+  "facts": ["Requirement REQ-023 approved in specs/features/example/requirements.md"],
+  "unverified": ["External dependency compatibility awaiting independent check"],
+  "completed": ["Draft API schema added"],
+  "remaining": ["Implement service and tests", "Run integration suite"],
+  "tests": [{"name":"integration","status":"not-run","evidence":""}],
+  "next_action": "Verify repository commit, read project policies, and inspect contract before editing"
+}

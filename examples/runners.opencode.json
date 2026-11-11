@@ -1,0 +1,22 @@
+{
+  "profiles": {
+    "manual": {
+      "type": "manual"
+    },
+    "opencode": {
+      "type": "opencode",
+      "argv": [
+        "opencode"
+      ],
+      "agent": "build",
+      "timeout_seconds": 900,
+      "env_allowlist": []
+    }
+  },
+  "routing": {
+    "defaults": [
+      "opencode"
+    ],
+    "by_role": {}
+  }
+}

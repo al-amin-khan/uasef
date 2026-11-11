@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/uasef/schemas/task-state.schema.json",
+  "title": "UASEF inception project state",
+  "type": "object",
+  "required": ["schema_version", "framework_version", "name", "tasks", "audit"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "framework_version": {"type": "string"},
+    "name": {"type": "string", "minLength": 1},
+    "idea": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "tasks": {
+      "type": "array", "items": {
+        "type": "object",
+        "required": ["id", "title", "role", "status", "depends_on", "outputs", "approval_required"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^INIT-0(0[1-9]|1[0-6])$"},
+          "status": {"enum": ["pending", "in_progress", "awaiting_approval", "completed", "blocked", "cancelled"]},
+          "title": {"type": "string"},
+          "role": {"type": "string"},
+          "depends_on": {"type": "array", "items": {"type": "string"}},
+          "outputs": {"type": "array", "items": {"type": "string"}},
+          "approval_required": {"type": "boolean"},
+          "evidence": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "audit": {"type": "array", "items": {"type": "object"}}
+  }
+}

@@ -1,0 +1,9 @@
+project:
+  name: "Unspecified - update after INIT-001"
+  description: "Unspecified - see docs/00-inception/idea-brief.md"
+  lifecycle: inception
+  framework: uasef
+  framework_version: "0.2.0"
+  stack: null  # Intentionally undecided until approved architecture decision.
+  source_of_truth: docs/
+  task_state: .uasef/state.json

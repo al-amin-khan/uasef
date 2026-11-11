@@ -1,0 +1,14 @@
+{
+  "id": "ADR-001",
+  "title": "Example stack selection (not a recommendation)",
+  "status": "proposed",
+  "context": "Example business web application with unknown traffic and cost constraints",
+  "alternatives": [
+    {"name":"Option A","tradeoffs":"Pending verified comparison","sources":[]},
+    {"name":"Option B","tradeoffs":"Pending verified comparison","sources":[]}
+  ],
+  "decision": "Undecided until validated requirements and evidence exist",
+  "consequences": "Engineering implementation cannot assume a framework yet",
+  "revisit_when": ["Product requirements are validated"],
+  "approved_by": null
+}

@@ -1,0 +1,18 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Architecture/Solution Decision Record",
+  "type":"object",
+  "required":["id","title","status","context","alternatives","decision","consequences"],
+  "properties":{
+    "id":{"type":"string","pattern":"^(ADR|DEC)-[0-9]+$"},
+    "title":{"type":"string"},
+    "status":{"enum":["proposed","accepted","rejected","superseded"]},
+    "context":{"type":"string"},
+    "alternatives":{"type":"array","items":{"type":"object","required":["name","tradeoffs"],"properties":{"name":{"type":"string"},"tradeoffs":{"type":"string"},"sources":{"type":"array","items":{"type":"string"}}}}},
+    "decision":{"type":"string"},
+    "consequences":{"type":"string"},
+    "revisit_when":{"type":"array","items":{"type":"string"}},
+    "approved_by":{"type":["string","null"]},
+    "date":{"type":"string"}
+  }
+}
