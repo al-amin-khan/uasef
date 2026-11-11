@@ -1,5 +1,15 @@
 # Project memory and Git traceability
 
+Review hardening: malformed records now report the affected filename and recovery
+instructions. Automatic export failures warn separately after task state is saved;
+repair or restore the record and run `uasef memory sync`. Explicit memory reads
+still reject malformed history so agents cannot unknowingly use partial context.
+Default briefs now include up to six recent task-related session notes/checkpoints.
+Checkpoints reject unexpected files and symlinks before staging and select only
+recognized memory files. Deleted memory records should be restored or handled
+through an explicitly reviewed ordinary Git commit.
+See [Git workflow](GIT-WORKFLOW.md) for optional Lefthook/Cocogitto setup.
+
 UASEF 0.4 records how a project develops from its initial idea. Every initialized
 project gets `docs/project-memory/`, containing `project.json`, a starting guide,
 and one JSON file per record in `records/`. Commit this directory with your work.

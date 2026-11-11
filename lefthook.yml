@@ -1,0 +1,9 @@
+# Optional: install lefthook and cog, then explicitly run `lefthook install`.
+pre-commit:
+  commands:
+    whitespace:
+      run: git diff --cached --check
+commit-msg:
+  commands:
+    conventional-commit:
+      run: cog verify --file "{1}"
