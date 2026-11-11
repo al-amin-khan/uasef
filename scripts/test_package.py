@@ -44,7 +44,7 @@ def main():
         cli = binaries / ("uasef.exe" if os.name == "nt" else "uasef")
         run([python, "-m", "pip", "install", "--no-index", "--no-deps", wheel], base, env)
         resource_root = Path(run([python, "-I", "-c", "from uasef.cli import framework_root; print(framework_root())"], base, env).strip())
-        assert resource_root.is_relative_to(environment), resource_root
+        assert resource_root.resolve().is_relative_to(environment.resolve()), resource_root
         assert resource_root.name == "_resources"
         project = base / "project with spaces"
         run([cli, "init", project, "--git-hooks", "--idea", "Verify standalone packaging"], base, env)
