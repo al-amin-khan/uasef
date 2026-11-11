@@ -1,0 +1,7 @@
+include framework.json lefthook.yml
+recursive-include agents *.md *.json *.yaml *.yml
+recursive-include skills *.md *.json *.yaml *.yml
+recursive-include policies *.md *.json *.yaml *.yml
+recursive-include templates *.md *.json *.yaml *.yml
+recursive-include workflows *.md *.json *.yaml *.yml
+recursive-include schemas *.md *.json *.yaml *.yml
