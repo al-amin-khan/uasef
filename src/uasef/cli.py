@@ -137,6 +137,8 @@ def init(args):
         raise ValueError("Target is not empty. Pass --existing to add UASEF safely without overwriting files.")
     p.mkdir(parents=True, exist_ok=True)
     name = args.name or p.name
+    if getattr(args, "git_hooks", False):
+        copy_if_missing(root / "lefthook.yml", p / "lefthook.yml")
     idea = args.idea or "Not provided. Describe the problem during INIT-001."
     workflow = read_json(root / "workflows" / "inception.json")
     tasks = []
@@ -193,6 +195,8 @@ def upgrade(args):
     root = framework_root()
     p = Path(args.project).resolve()
     state = load(p)
+    if getattr(args, "git_hooks", False):
+        copy_if_missing(root / "lefthook.yml", p / "lefthook.yml")
     if state.get("framework_version") not in ("0.1.0", "0.2.0", "0.3.0", "0.4.0"):
         raise ValueError("Unsupported source framework version; review upgrade manually")
     for policy in (root / "policies").glob("*.md"):
@@ -383,6 +387,7 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("init", help="Initialize a project without overwriting existing files")
     p.add_argument("path"); p.add_argument("--name"); p.add_argument("--idea")
+    p.add_argument("--git-hooks", action="store_true", help="Copy optional Lefthook/Cocogitto configuration; never install hooks")
     p.add_argument("--existing", action="store_true", help="Allow an existing nonempty project; never overwrite")
     p.add_argument("--adapter", choices=("codex", "claude", "copilot", "opencode", "all"), default="all")
     p.set_defaults(func=init)
@@ -397,6 +402,7 @@ def main(argv=None):
         if command == "approve": q.add_argument("--note", required=True)
         q.set_defaults(func=func)
     q = sub.add_parser("upgrade", help="Install framework files and memory without overwriting customizations")
+    q.add_argument("--git-hooks", action="store_true", help="Copy missing Lefthook configuration without replacing existing files")
     q.add_argument("--project", default=".")
     q.add_argument("--adapter", choices=("codex","claude","copilot","opencode","all"), default="all")
     q.set_defaults(func=upgrade)
