@@ -7,7 +7,7 @@ import tempfile
 
 
 def run(root, *args, success=True):
-    result = subprocess.run(args, cwd=root, capture_output=True, text=True)
+    result = subprocess.run(args, cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if (result.returncode == 0) != success:
         raise AssertionError(f"Unexpected result for {args}:\n{result.stdout}\n{result.stderr}")
     return result.stdout.strip()
