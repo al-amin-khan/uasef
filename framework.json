@@ -1,6 +1,6 @@
 {
   "name": "UASEF",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "methodology": "research-evaluate-decide-specify-implement-verify-learn",
   "inception_workflow": "workflows/inception.json",
   "portable_skill_directory": "skills",
@@ -14,5 +14,6 @@
   ],
   "agent_runtime": "manual prompts or opt-in configured subprocess CLI",
   "execution_mode": "explicit opt-in; human-supervised with independent review",
-  "orchestration": "SQLite transactional execution tasks, leases, retries, verification and approvals"
+  "orchestration": "SQLite transactional execution tasks, leases, retries, verification and approvals",
+  "project_memory": "Git-versioned append-only records in docs/project-memory; requirements, decisions, tasks, commits and evidence"
 }

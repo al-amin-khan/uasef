@@ -1,8 +1,29 @@
 # UASEF — Universal AI Software Engineering Framework
 
-**v0.3.0 + experimental OpenCode integration.** UASEF provides portable Agent Skills, specialist role contracts, evidence-based project inception, task orchestration, persistent handoffs, and human-controlled quality gates. It is **model-agnostic and technology-stack-agnostic**.
+**v0.4.0 with Git-backed project memory + experimental OpenCode integration.** UASEF provides portable Agent Skills, specialist role contracts, evidence-based project inception, task orchestration, persistent handoffs, and human-controlled quality gates. It is **model-agnostic and technology-stack-agnostic**.
 
 > **Starting with only an idea?** Follow [the complete zero-to-production walkthrough](#complete-walkthrough-from-zero-prompt-to-production). UASEF is a workflow coordinator, **not** an autonomous one-prompt software factory. An installed AI coding agent does the research and coding; you review important decisions and verify results.
+
+## Git-backed project memory (v0.4)
+
+UASEF now preserves project history from the original idea through requirements,
+decisions, tasks, code commits and verification evidence. Portable JSON records
+in `docs/project-memory/` travel with Git. Scoped prompts and handoffs include a
+concise current brief so another model can continue with the relevant history.
+
+```powershell
+# Existing UASEF project, after installing this version:
+uasef upgrade --project .
+uasef memory brief
+uasef memory add decision --title "Storage choice" --text "Keep SQL because the team operates it; alternatives were evaluated."
+uasef memory checkpoint --init-git --message "docs: preserve project decisions"
+```
+
+Use `memory add --link/--task/--commit/--evidence` to connect the reasoning to
+implementation and evidence. Use `--supersedes` for changed decisions and
+`--claim inferred` for interpretations that the owner has not confirmed.
+See the [complete project memory guide](docs/PROJECT-MEMORY.md), including
+model handoffs, upgrades, evidence validation, and Git checkpoint behavior.
 
 ## Table of contents
 

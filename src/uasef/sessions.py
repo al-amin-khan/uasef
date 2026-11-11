@@ -116,6 +116,9 @@ def context(conn, sid, limit=12):
 
 def export(conn, project, sid):
     content = context(conn, sid)
+    from .memory import sync, brief
+    sync(project)
+    content += "\n" + brief(project, task=session(conn, sid)["task_id"])
     root = Path(project).resolve() / ".uasef" / "sessions" / sid
     root.mkdir(parents=True, exist_ok=True)
     out = root / "handoff.md"
