@@ -1,5 +1,12 @@
 # Git workflow and optional commit tools
 
+Use `uasef init ../product --git-hooks` or `uasef upgrade --git-hooks` to copy
+the configuration into a project. Existing `lefthook.yml` files are preserved.
+Install binaries and run `lefthook install` separately after reviewing existing hooks.
+CI now runs `scripts/live_git_tools.py` with real Lefthook 2.2.2 and Cocogitto 7.0.0
+on Windows and Linux. It tests valid and invalid commits, whitespace rejection,
+memory checkpoints, unrelated staging preservation, history validation and upgrades.
+
 UASEF supports isolated Git worktrees, explicit memory checkpoints, commit SHA
 references, and evidence hashes. It does not automatically install binaries,
 activate hooks, push, merge, protect branches, or publish releases.
