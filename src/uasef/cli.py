@@ -415,6 +415,15 @@ def main(argv=None):
     attach(sub)
     attach_sessions(sub)
     attach_memory(sub)
+    from .doctor import run as doctor
+    q = sub.add_parser("doctor", help="Read-only setup and project diagnostics")
+    q.add_argument("--project", default=".")
+    q.add_argument("--json", action="store_true")
+    q.set_defaults(func=doctor)
+    q.add_argument("--auth", action="store_true", help="Inspect OpenCode auth configuration without printing credentials")
+    q.add_argument("--live", action="store_true", help="Send a minimal OpenCode model probe; may incur provider charges")
+    q.add_argument("--model", help="Explicit provider/model for the live probe")
+    q.add_argument("--timeout", type=int, default=60, help="Agent probe timeout in seconds (1-300)")
     args = parser.parse_args(argv)
     try:
         result = args.func(args)

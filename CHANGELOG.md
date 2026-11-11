@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - Doctor diagnostics
+
+- Add local setup, project-state and effective Git hook inspection with JSON output.
+- Add explicit OpenCode authentication configuration and model connectivity probes.
+- Keep credential configuration separate from verified access; suppress raw agent output.
+
 ## 0.4.0 - Git-backed project memory
 
 - Record ideas, requirements, decisions, preferences, findings, verification and current briefs as portable append-only JSON history.
