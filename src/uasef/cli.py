@@ -25,11 +25,14 @@ def now():
 
 
 def framework_root():
-    # Source checkout and editable install are supported. Release packaging
-    # should include resources with package_data if distributing wheels.
+    # Prefer bundled resources for normal pip installs, independent of cwd.
+    bundled = Path(__file__).resolve().parent / "_resources"
+    if (bundled / "workflows" / "inception.json").is_file():
+        return bundled
+    # Editable development installs use the canonical checkout resources.
     root = Path(__file__).resolve().parents[2]
     if not (root / "workflows" / "inception.json").is_file():
-        raise RuntimeError("Framework resources not found. Run from a source checkout or editable install.")
+        raise RuntimeError("Framework resources not found. Reinstall a complete UASEF wheel or editable source checkout.")
     return root
 
 

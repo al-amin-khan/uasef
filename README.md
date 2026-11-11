@@ -96,7 +96,19 @@ python3 -m pip install -e .
 python3 -m unittest discover -s tests -v
 ```
 
-UASEF currently requires a source checkout/editable install because the framework resource files are not yet bundled into a standalone published wheel. **Keep the framework checkout separate from each software project.**
+UASEF supports both editable development installs and standalone wheels with bundled
+framework resources. **Keep the framework checkout separate from each software project.**
+To build a standalone package from this checkout:
+
+```powershell
+python -m pip install build
+python -m build
+python -m pip install dist/uasef-0.4.0-py3-none-any.whl
+```
+
+Install the wheel in your chosen virtual environment. After installation, its source
+checkout is no longer needed to run UASEF. Keep the environment and activate it when
+using `uasef`. This does not publish a release to PyPI. See [packaging](docs/PACKAGING.md).
 
 
 ### Windows: virtual environment and PATH troubleshooting

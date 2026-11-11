@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - Standalone packaging
+
+- Bundle canonical framework resources in wheels and source distributions.
+- Resolve installed resources independently of the source checkout or working directory.
+- Exercise isolated installations on Windows/Linux with Python 3.10/3.12 in CI.
+
 ## Unreleased - Doctor diagnostics
 
 - Add local setup, project-state and effective Git hook inspection with JSON output.

@@ -120,11 +120,11 @@ def diagnose(project, auth=False, live=False, model=None, timeout=60):
         "Use Python 3.10 or newer.")
     try:
         root = framework_root()
-        missing = [name for name in ("workflows", "templates", "policies") if not (root / name).is_dir()]
+        missing = [name for name in ("workflows", "templates", "policies", "agents", "skills", "schemas") if not (root / name).is_dir()]
         add("resources", "error" if missing else "ok", "Missing: " + ", ".join(missing) if missing else str(root),
-            "Reinstall from a complete source checkout with pip install -e .")
+            "Reinstall a complete UASEF wheel or editable source checkout.")
     except RuntimeError as exc:
-        add("resources", "error", str(exc), "Reinstall from a complete source checkout.")
+        add("resources", "error", str(exc), "Reinstall a complete UASEF wheel or editable source checkout.")
     for name in ("git", "lefthook", "cog", "opencode", "codex", "claude"):
         found = shutil.which(name)
         add(name, "ok" if found else "warning", found or "Not found on PATH",
