@@ -6,6 +6,15 @@
 
 ## Git-backed project memory (v0.4)
 
+Run `uasef doctor --project <path>` for read-only setup diagnostics, or add
+`--json` for machine-readable output. It checks framework resources, executable
+discovery, basic inception state, memory record readability and hook configuration
+presence. Default checks never execute agents/hooks. Opt-in `--auth` and
+`--live --model provider/model` enable OpenCode probes; see [Doctor](docs/DOCTOR.md).
+It never installs tools. Exit code 1 means an
+error; optional missing tools produce warnings and exit code 0. Executable presence
+does not verify authentication, hook activation, or provider compatibility.
+
 Optional [Lefthook + Cocogitto setup](docs/GIT-WORKFLOW.md) is provided for staged
 whitespace checks and Conventional Commit validation. Hooks require explicit installation.
 
