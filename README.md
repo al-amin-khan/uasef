@@ -37,6 +37,18 @@ implementation and evidence. Use `--supersedes` for changed decisions and
 See the [complete project memory guide](docs/PROJECT-MEMORY.md), including
 model handoffs, upgrades, evidence validation, and Git checkpoint behavior.
 
+## Coding quality and public-web SEO
+
+Coding and review follow [coding standards](policies/coding-standards.md), including
+a proportional complexity review. Public web content also follows the
+[SEO policy](policies/seo.md); internal apps and non-web projects can mark it not
+applicable. These are agent/reviewer instructions, not an automatic quality or SEO scanner.
+
+After installing this revision, `uasef upgrade --project <path>` adds missing policy
+files while preserving existing files. Existing projects must manually reconcile
+updated charter, role and quality-gate guidance with their customized copies;
+upgrade does not overwrite those instructions. New projects receive the updated defaults.
+
 ## Table of contents
 
 - [What UASEF can and cannot do](#what-uasef-can-and-cannot-do)

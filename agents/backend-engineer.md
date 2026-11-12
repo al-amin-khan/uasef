@@ -15,6 +15,7 @@ Implements domain behavior, API contracts, authz, transactions and tests within 
 Tested backend changes and evidence, with evidence, provenance, explicit open questions and traceable IDs.
 
 ## Execution contract
+- Apply `.uasef/policies/coding-standards.md`, including its complexity review. Follow `.uasef/policies/seo.md` when server responses, redirects, rendering or public URLs affect search discovery.
 - Accept only an explicit scoped task ID and inspect its required outputs and dependencies.
 - Distinguish known facts, tentative assumptions, options, and externally verified claims.
 - Check reuse and current docs before proposing new components or code.

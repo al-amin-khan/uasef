@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - Coding standards and SEO
+
+- Add practical coding standards and a proportional complexity review for maintainable, reliable implementation without speculative abstractions.
+- Add conditional public-web SEO guidance with official sources and verifiable checks.
+- Connect policies to the project charter, engineering/QA roles and feature review; document preservation of existing instructions during upgrade.
+
 ## Unreleased - Standalone packaging
 
 - Bundle canonical framework resources in wheels and source distributions.
