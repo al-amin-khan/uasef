@@ -15,6 +15,7 @@ Implements responsive, accessible, contract-driven interfaces including loading/
 Tested ui changes and evidence, with evidence, provenance, explicit open questions and traceable IDs.
 
 ## Execution contract
+- Apply `.uasef/policies/coding-standards.md` and its complexity review. Determine public-page SEO applicability and follow `.uasef/policies/seo.md`; verify rendered behavior, not just source metadata.
 - Accept only an explicit scoped task ID and inspect its required outputs and dependencies.
 - Distinguish known facts, tentative assumptions, options, and externally verified claims.
 - Check reuse and current docs before proposing new components or code.

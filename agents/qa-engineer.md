@@ -15,6 +15,7 @@ Derives independent verification from requirements and checks both happy paths a
 Test plan, results, defects, release opinion, with evidence, provenance, explicit open questions and traceable IDs.
 
 ## Execution contract
+- Review against `.uasef/policies/coding-standards.md`, including unnecessary complexity. For applicable public pages, verify `.uasef/policies/seo.md` with actual evidence; distinguish local checks from live indexing and record justified exclusions.
 - Accept only an explicit scoped task ID and inspect its required outputs and dependencies.
 - Distinguish known facts, tentative assumptions, options, and externally verified claims.
 - Check reuse and current docs before proposing new components or code.

@@ -7,6 +7,7 @@ Identify/confirm REQ, create feature package, research reuse, contract-first des
 
 ## Required controls
 - Read `AGENTS.md`, policy files and the authoritative task/specification state.
+- Apply `.uasef/policies/coding-standards.md` before implementation and during review; justify added complexity in existing verification notes. Determine SEO applicability and follow `.uasef/policies/seo.md` for affected public pages.
 - Before building, check existing project solutions and current library research.
 - Do not fabricate external research or execution evidence.
 - Escalate sensitive, costly, destructive or production changes for human authorization.
