@@ -6,6 +6,11 @@
 
 ## Git-backed project memory (v0.4)
 
+New reliability commands: `uasef backup`, `restore`, `verification run/check`,
+and `memory timeline/conflicts/search`. See the [roadmap delivery guide](docs/ROADMAP-DELIVERY.md)
+for backup scope, migration/recovery guarantees, commit-bound verification policy,
+indexed retrieval and the remaining provider-backed acceptance gate.
+
 Run `uasef doctor --project <path>` for read-only setup diagnostics, or add
 `--json` for machine-readable output. It checks framework resources, executable
 discovery, basic inception state, memory record readability and hook configuration
