@@ -210,7 +210,9 @@ def incomplete_children(conn, task_id):
     return [r["id"] for r in conn.execute("SELECT id FROM tasks WHERE parent_id=? AND status != 'completed' ORDER BY id", (task_id,))]
 
 
-def verify(conn, project, task_id, reviewer, evidence):
+def verify(conn, project, task_id, reviewer, evidence, verification=None):
+    from .verification import gate
+    receipt_hash = gate(project, verification)
     if not reviewer.strip() or reviewer.strip().lower() == "agent":
         raise ValueError("Specify the named reviewer; this is a local assertion, not authenticated")
     if not evidence:
@@ -234,6 +236,9 @@ def verify(conn, project, task_id, reviewer, evidence):
         status = "awaiting_approval" if t["needs_approval"] else "completed"
         conn.execute("UPDATE tasks SET status=?,updated_at=? WHERE id=?",(status,timestamp(),task_id))
         audit(conn,task_id,"verified",actor=reviewer,detail=json.dumps(evidence))
+        if verification:
+            audit(conn, task_id, "verification_receipt", actor=reviewer,
+                  detail=json.dumps({"id": verification, "sha256": receipt_hash}))
         conn.commit()
         return status
     except Exception:
