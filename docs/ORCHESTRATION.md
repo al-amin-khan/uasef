@@ -113,3 +113,19 @@ uasef task retry API-001
 This is a **single-machine coordinator**, not an always-on service, authenticated approval platform or hardened sandbox. It does not automatically ask discovery questions, search packages, instantiate cloud agents or evaluate code correctness. External AI execution requires an installed/authorized CLI; Git worktrees are only repository isolation. `--worktree` preserves branches for explicit review instead of auto-merging. Every subprocess executes with your account's permissions and may access the network, secrets or files outside the workspace according to its own tools and configuration.
 
 Always inspect the profile, use the coding CLI's own sandbox/approval options, and avoid production credentials. Run real tests independently before marking work verified.
+## Dispatch result contract
+
+`uasef dispatch` returns 0 for a prepared preview/manual prompt or a successful
+runner exit (still awaiting review), 1 when a runner fails, times out or cannot
+launch, and 2 for invalid arguments or blocked dispatch. The run record preserves
+the original process exit code. A CLI zero is never a claim of verified completion.
+
+`dispatch-ready` reports every selected task and returns the highest result code:
+0 when all attempts succeed, 1 when any execution fails, or 2 when any dispatch is
+blocked. Other independent selected tasks are still attempted. No ready tasks is
+a successful no-op. Parallel execution still requires worktrees.
+
+Task creation validates explicit dependencies together with the requirement that
+parents wait for their children. Direct, ancestor and transitive dependency cycles
+are rejected atomically, without leaving a partial task or delegation audit entry.
+Existing tasks are not automatically rewritten to repair old cycles.

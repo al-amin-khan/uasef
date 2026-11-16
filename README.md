@@ -6,12 +6,14 @@
 
 ## Core milestone: Verified Delivery
 
-**Planned:** [CORE-VD-001 — Verified Delivery](docs/VERIFIED-DELIVERY-MILESTONE.md).
+**In progress:** [CORE-VD-001 — Verified Delivery](docs/VERIFIED-DELIVERY-MILESTONE.md).
 The next core milestone connects approved requirements to checked commits,
 protected CI, reproducible staging releases, operational evidence and rehearsed
 recovery. It includes coordinator correctness, required verification, application
 CI/CD, deployment/data safety, conditional SEO/accessibility/performance checks,
 and resumable project setup.
+
+[Current progress and evidence](docs/VERIFIED-DELIVERY-PROGRESS.md) track completed integration and remaining work.
 
 The plan defines eight phases (VD-00 through VD-07), dependencies, responsible
 roles and measurable acceptance gates. It reuses the existing roadmap work in

@@ -6,7 +6,7 @@ from setuptools.command.build_py import build_py
 
 ROOT = Path(__file__).resolve().parent
 DIRECTORIES = ("agents", "skills", "policies", "templates", "workflows", "schemas")
-FILES = ("framework.json", "lefthook.yml", "docs/VERIFIED-DELIVERY-MILESTONE.md")
+FILES = ("framework.json", "lefthook.yml", "docs/VERIFIED-DELIVERY-MILESTONE.md", "docs/VERIFIED-DELIVERY-PROGRESS.md")
 
 
 def resource_files():

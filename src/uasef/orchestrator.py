@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from graphlib import CycleError, TopologicalSorter
 import json
 from pathlib import Path
 import re
@@ -120,6 +121,23 @@ def list_tasks(conn):
     return [as_dict(x) for x in conn.execute("SELECT * FROM tasks ORDER BY created_at,id")]
 
 
+def validate_completion_graph(conn, task_id, depends, parent_id):
+    """Include the implicit requirement that a parent waits for its children."""
+    graph = TopologicalSorter()
+    for item in list_tasks(conn):
+        graph.add(item['id'], *item['dependencies'])
+        if item['parent_id']:
+            graph.add(item['parent_id'], item['id'])
+    graph.add(task_id, *depends)
+    if parent_id:
+        graph.add(parent_id, task_id)
+    try:
+        graph.prepare()
+    except CycleError as exc:
+        cycle = ' -> '.join(exc.args[1])
+        raise ValueError(f"Task dependency/delegation cycle: {cycle}") from exc
+
+
 def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(), context=(), approval=False, parent_id=None, design_task_id=None, design_waiver=""):
     if not TASK_ID.fullmatch(task_id) or len(task_id) > 80:
         raise ValueError("Task ID must be uppercase alphanumeric with hyphens (e.g. API-001)")
@@ -161,20 +179,28 @@ def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(),
         if depth >= 3:
             raise ValueError("Delegation depth limit of 3 exceeded")
     for d in depends:
-        task(conn, d)  # existing-task-only dependencies prevent cycles
+        task(conn, d)  # Dependencies must exist; combined cycles are checked below.
     from .executor import safe_document
     for filename in context:
         safe_document(base, filename)
     t = timestamp()
+    conn.execute("BEGIN IMMEDIATE")
     try:
-        with conn:
-            conn.execute("INSERT INTO tasks(id,title,role,skill,acceptance,context_paths,dependencies,needs_approval,created_at,updated_at,parent_id,design_gate_required,design_task_id,design_waiver) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                         (task_id,title,role,skill,acceptance,json.dumps(context),json.dumps(depends),int(approval),t,t,parent_id,int(design_gate_required),design_task_id,design_waiver))
-            audit(conn, task_id, "created", detail=f"depends={depends}; approval={approval}; parent={parent_id}; design_task={design_task_id or ''}; design_waiver={design_waiver}")
-            if parent_id:
-                audit(conn, parent_id, "delegated", detail=f"child={task_id}; role={role}")
+        validate_completion_graph(conn, task_id, depends, parent_id)
+        if parent_id and task(conn, parent_id)["status"] in TERMINAL:
+            raise ValueError("Cannot delegate from a closed task")
+        conn.execute("INSERT INTO tasks(id,title,role,skill,acceptance,context_paths,dependencies,needs_approval,created_at,updated_at,parent_id,design_gate_required,design_task_id,design_waiver) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                     (task_id,title,role,skill,acceptance,json.dumps(context),json.dumps(depends),int(approval),t,t,parent_id,int(design_gate_required),design_task_id,design_waiver))
+        audit(conn, task_id, "created", detail=f"depends={depends}; approval={approval}; parent={parent_id}; design_task={design_task_id or ''}; design_waiver={design_waiver}")
+        if parent_id:
+            audit(conn, parent_id, "delegated", detail=f"child={task_id}; role={role}")
+        conn.commit()
     except sqlite3.IntegrityError as e:
+        conn.rollback()
         raise ValueError(f"Task already exists or violates constraints: {task_id}") from e
+    except Exception:
+        conn.rollback()
+        raise
     return task(conn, task_id)
 
 

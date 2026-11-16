@@ -14,3 +14,22 @@ Distributed worker queue and job heartbeats; hardened sandbox execution; evidenc
 
 ## Safe deployment
 Use least-privilege service credentials and stage environments. Never provide unrestricted shell/database/cloud tokens to unknown skills or autonomously initiated tasks. Require human approval for operations with financial, personal-data, destructive or production impact.
+
+## Consolidated capabilities and remaining limits
+
+The guided `init --interactive` interview gathers a fixed set of answers and
+requires review before writing project files; it is not an autonomous discovery
+agent. Workflow guides are installed into generated projects without replacing
+customized copies. Frontend design gates are local workflow controls, not
+identity-authenticated approvals.
+
+State backup/restore and commit-bound verification are described in
+[Roadmap delivery](ROADMAP-DELIVERY.md). Backups do not include the full application
+or its production database. Verification receipts remain local assertions and do
+not enforce required CI checks or authorize deployment. Indexed memory conflicts
+are structural/heuristic findings, not proven semantic contradictions.
+
+Coordinator failure reporting and combined dependency-cycle checks are enforced
+by code. Inception readiness enforcement, complete process-tree cancellation and
+safe retry controls remain planned under VD-01. See the
+[delivery progress record](VERIFIED-DELIVERY-PROGRESS.md).

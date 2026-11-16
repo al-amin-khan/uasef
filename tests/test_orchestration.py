@@ -121,7 +121,7 @@ class OrchestrationTests(unittest.TestCase):
     def test_runner_error_retry_and_audit(self):
         self.add()
         self.profile(exit_code=7)
-        self.assertEqual(self.invoke("dispatch","TASK-001","--profile","mock","--execute","--project",str(self.p)),0,self.message)
+        self.assertEqual(self.invoke("dispatch","TASK-001","--profile","mock","--execute","--project",str(self.p)),1,self.message)
         with o.db(self.p) as conn:
             self.assertEqual(o.task(conn,"TASK-001")["status"],"failed")
             self.assertEqual(o.task(conn,"TASK-001")["attempts"],1)

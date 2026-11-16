@@ -35,7 +35,7 @@ def main():
                     if source.is_file() and source.suffix in (".md", ".json", ".yaml", ".yml"):
                         name = "uasef/_resources/" + source.relative_to(ROOT).as_posix()
                         assert archive.read(name) == source.read_bytes(), name
-            for name in ("framework.json", "lefthook.yml", "docs/VERIFIED-DELIVERY-MILESTONE.md"):
+            for name in ("framework.json", "lefthook.yml", "docs/VERIFIED-DELIVERY-MILESTONE.md", "docs/VERIFIED-DELIVERY-PROGRESS.md"):
                 assert archive.read("uasef/_resources/" + name) == (ROOT / name).read_bytes()
         environment = base / "environment"
         venv.EnvBuilder(with_pip=True).create(environment)

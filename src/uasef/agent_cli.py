@@ -2,11 +2,18 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 import json
 from pathlib import Path
 
 from . import executor as ex
 from . import orchestrator as orch
+
+
+@dataclass(frozen=True)
+class DispatchResult:
+    message: str
+    exit_code: int = 0
 
 
 def add(args):
@@ -119,12 +126,12 @@ def _dispatch(project, task_id, profile_name, execute, worktree=False, session_i
             prompt=ex.prepare(root,t,f"manual-{task_id.lower()}")
             if session_id:
                 with prompt.open("a",encoding="utf-8") as file:file.write("\n\n"+sessions.context(conn,session_id))
-            return f"Manual prompt prepared: {prompt}. Task remains queued; agent work is not verified automatically."
+            return DispatchResult(f"Manual prompt prepared: {prompt}. Task remains queued; agent work is not verified automatically.")
         if not execute:
             prompt=ex.prepare(root,t,f"preview-{task_id.lower()}")
             if session_id:
                 with prompt.open("a",encoding="utf-8") as file:file.write("\n\n"+sessions.context(conn,session_id))
-            return f"Dry run only. Selected {profile_name}; prompt: {prompt}. Use --execute to opt into subprocess execution."
+            return DispatchResult(f"Dry run only. Selected {profile_name}; prompt: {prompt}. Use --execute to opt into subprocess execution.")
         timeout = ex.validate_profile(profile)
         if profile["type"] == "opencode":
             from .opencode import ensure_installed
@@ -156,13 +163,17 @@ def _dispatch(project, task_id, profile_name, execute, worktree=False, session_i
                 # A session can be closed while an external process is running.
                 # Its task/run outcome is still persisted in authoritative execution state.
                 pass
-    return (f"Task {task_id}: {result}; run={run_id}; exit={code}; workspace={workspace}; log={log_path}. "
+    message = (f"Task {task_id}: {result}; run={run_id}; exit={code}; workspace={workspace}; log={log_path}. "
             + (f"Error: {err}. " if err else "")
             + ("Requires independent review and test evidence before completion." if code==0 else "Inspect logs, then use 'uasef task retry' if appropriate."))
 
+    return DispatchResult(message, 0 if code == 0 else 1)
+
 
 def dispatch(args):
-    print(_dispatch(args.project,args.id,args.profile,args.execute,args.worktree,args.session))
+    result = _dispatch(args.project,args.id,args.profile,args.execute,args.worktree,args.session)
+    print(result.message)
+    return result.exit_code
 
 
 def dispatch_ready(args):
@@ -175,14 +186,27 @@ def dispatch_ready(args):
     if not ready:
         print("No ready tasks")
         return
+    def attempt(item):
+        try:
+            return _dispatch(args.project,item['id'],args.profile,args.execute,args.worktree)
+        except (ValueError, OSError, RuntimeError) as exc:
+            return DispatchResult(f"Task {item['id']}: dispatch blocked: {exc}", 2)
+
+    exit_code = 0
     if args.jobs <= 1:
-        for t in ready:
-            print(_dispatch(args.project,t['id'],args.profile,args.execute,args.worktree))
+        for item in ready:
+            result = attempt(item)
+            print(result.message)
+            exit_code = max(exit_code, result.exit_code)
     else:
         with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-            futures=[pool.submit(_dispatch,args.project,t['id'],args.profile,args.execute,args.worktree) for t in ready]
-            for f in as_completed(futures):
-                print(f.result())
+            futures = [pool.submit(attempt, item) for item in ready]
+            for future in as_completed(futures):
+                result = future.result()
+                print(result.message)
+                exit_code = max(exit_code, result.exit_code)
+    return exit_code
+
 
 
 

@@ -105,7 +105,7 @@ class OpenCodeIntegration(unittest.TestCase):
 
     def test_error_event_fails_run_even_exit_zero(self):
         with patch.dict(os.environ,{'UASEF_ALLOWED_TEST':'visible','UASEF_MOCK_ERROR':'yes'}):
-            self.assertEqual(self.call('dispatch','API-001','--profile','opencode','--execute','--project',str(self.project)),0,self.output)
+            self.assertEqual(self.call('dispatch','API-001','--profile','opencode','--execute','--project',str(self.project)),1,self.output)
         with orch.db(self.project) as db:
             self.assertEqual(orch.task(db,'API-001')['status'],'failed')
             self.assertEqual(db.execute('SELECT exit_code FROM runs').fetchone()[0],1)
