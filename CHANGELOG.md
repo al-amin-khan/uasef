@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Core milestone planning
+
+- Establish CORE-VD-001 (Verified Delivery) as the next core engineering milestone.
+- Define phases, dependencies, owners, acceptance evidence and audit-finding traceability across verification, CI/CD, deployment, operations and conditional web quality.
+- Register the milestone in framework metadata and link its plan from the README; no runtime behavior or release version changes.
+
 ## Unreleased - Standalone packaging
 
 - Bundle canonical framework resources in wheels and source distributions.
