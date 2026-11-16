@@ -12,7 +12,8 @@ from . import orchestrator as orch
 def add(args):
     with orch.db(args.project) as conn:
         t = orch.add_task(conn,args.project,args.id,args.title,args.role,args.skill,
-                          args.acceptance,args.depends,args.context,args.approval_required,args.parent)
+                          args.acceptance,args.depends,args.context,args.approval_required,args.parent,
+                          args.design_task,args.design_waiver)
     print(f"Created {t['id']} [{t['status']}] role={t['role']} skill={t['skill']}")
 
 
@@ -21,7 +22,8 @@ def status(args):
         rows=orch.list_tasks(conn)
         for t in rows:
             flag = " [READY]" if orch.eligible(conn,t) else ""
-            print(f"{t['id']:20} {t['status']:19} {t['role']:22} {t['title']}{flag}")
+            gate = f" [design: {t['design_task_id']}]" if t.get("design_task_id") else (" [design waived]" if t.get("design_waiver") else "")
+            print(f"{t['id']:20} {t['status']:19} {t['role']:22} {t['title']}{gate}{flag}")
         if not rows:
             print("No execution tasks yet. Use: uasef task add --help")
 
@@ -36,7 +38,7 @@ def details(args):
 
 def verify(args):
     with orch.db(args.project) as conn:
-        result=orch.verify(conn,args.project,args.id,args.reviewer,args.evidence)
+        result=orch.verify(conn,args.project,args.id,args.reviewer,args.evidence,args.verification)
     print(f"Review recorded: {args.id} -> {result}. Local reviewer identity is not authenticated.")
 
 
@@ -218,6 +220,8 @@ def attach(sub):
     q.add_argument("--depends",action="append",default=[])
     q.add_argument("--context",action="append",default=[])
     q.add_argument("--approval-required",action="store_true")
+    q.add_argument("--design-task",help="Required approved UX task for a frontend-engineer task")
+    q.add_argument("--design-waiver",help="Reason to skip UX review for this frontend task (15-500 characters)")
     q.add_argument("--parent",help="Delegating parent task; child must complete before parent review")
     q.set_defaults(func=add)
     q=actions.add_parser("delegate",help="Create a scoped child task under a parent")
@@ -225,11 +229,14 @@ def attach(sub):
     q.add_argument("--role",required=True);q.add_argument("--skill",required=True)
     q.add_argument("--acceptance",required=True);q.add_argument("--depends",action="append",default=[])
     q.add_argument("--context",action="append",default=[]);q.add_argument("--approval-required",action="store_true")
+    q.add_argument("--design-task",help="Required approved UX task for a frontend-engineer task")
+    q.add_argument("--design-waiver",help="Reason to skip UX review for this frontend task (15-500 characters)")
     q.set_defaults(func=add)
     for name,fn in (("list",status),("tree",tree),("show",details),("verify",verify),("submit",submit),("approve",approve),("retry",retry),("recover",recover)):
         q=actions.add_parser(name)
         if name in ("show","verify","submit","approve","retry"):q.add_argument("id")
         if name=="verify":
+            q.add_argument("--verification", help="Passing verification receipt for the current clean commit")
             q.add_argument("--reviewer",required=True);q.add_argument("--evidence",action="append",required=True)
         if name=="submit":
             q.add_argument("--actor",required=True);q.add_argument("--evidence",action="append",required=True)

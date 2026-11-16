@@ -41,6 +41,12 @@ def build_prompt(project, task):
     from .memory import sync, brief
     sync(root)
     memory_context = brief(root, task=task["id"])
+    design_context = ""
+    if task.get("design_task_id"):
+        design_context = (f"\nDesign review gate: UX task {task['design_task_id']} was required and completed. "
+                          "Read the approved UX artifacts and preserve the accepted direction; document any necessary deviation.\n")
+    elif task.get("design_waiver"):
+        design_context = f"\nDesign review explicitly waived: {task['design_waiver']}\n"
     mandatory = ["AGENTS.md",f".uasef/roles/{task['role']}.md", f".agents/skills/{task['skill']}/SKILL.md"]
     candidates = mandatory + task["context_paths"]
     seen = set()
@@ -59,6 +65,7 @@ def build_prompt(project, task):
     return (f"# UASEF Scoped Task {task['id']}\n\n"
             f"Role: {task['role']}\nSkill: {task['skill']}\n"
             f"Title: {task['title']}\n\nAcceptance criteria:\n{task['acceptance']}\n\n"
+            + design_context +
             "Follow the project rules. Read the repository and verify the actual state. "
             "Prefer vetted existing solutions to custom code. Stay within task scope. "
             "Never approve your own work, claim tests ran without evidence, "

@@ -4,7 +4,27 @@
 
 > **Starting with only an idea?** Follow [the complete zero-to-production walkthrough](#complete-walkthrough-from-zero-prompt-to-production). UASEF is a workflow coordinator, **not** an autonomous one-prompt software factory. An installed AI coding agent does the research and coding; you review important decisions and verify results.
 
+## Core milestone: Verified Delivery
+
+**Planned:** [CORE-VD-001 — Verified Delivery](docs/VERIFIED-DELIVERY-MILESTONE.md).
+The next core milestone connects approved requirements to checked commits,
+protected CI, reproducible staging releases, operational evidence and rehearsed
+recovery. It includes coordinator correctness, required verification, application
+CI/CD, deployment/data safety, conditional SEO/accessibility/performance checks,
+and resumable project setup.
+
+The plan defines eight phases (VD-00 through VD-07), dependencies, responsible
+roles and measurable acceptance gates. It reuses the existing roadmap work in
+[PR #7](https://github.com/al-amin-khan/uasef/pull/7), guided initialization and
+reviewed UI/UX work. These are planned outcomes, not claims of completed automation;
+production deployment and paid-provider execution retain their authorization gates.
+
 ## Git-backed project memory (v0.4)
+
+New reliability commands: `uasef backup`, `restore`, `verification run/check`,
+and `memory timeline/conflicts/search`. See the [roadmap delivery guide](docs/ROADMAP-DELIVERY.md)
+for backup scope, migration/recovery guarantees, commit-bound verification policy,
+indexed retrieval and the remaining provider-backed acceptance gate.
 
 Run `uasef doctor --project <path>` for read-only setup diagnostics, or add
 `--json` for machine-readable output. It checks framework resources, executable
@@ -45,9 +65,33 @@ a proportional complexity review. Public web content also follows the
 applicable. These are agent/reviewer instructions, not an automatic quality or SEO scanner.
 
 After installing this revision, `uasef upgrade --project <path>` adds missing policy
-files while preserving existing files. Existing projects must manually reconcile
+and workflow files while preserving existing files. Existing projects must manually reconcile
 updated charter, role and quality-gate guidance with their customized copies;
 upgrade does not overwrite those instructions. New projects receive the updated defaults.
+
+## UI/UX mockups and library-first frontend work
+
+For every new or materially changed interface, follow the
+[UI/UX preview workflow](workflows/ui-ux-preview.md) and review the look before implementation
+(unless you explicitly waive the preview). The UX role inspects the real
+project stack and creates a clickable prototype or annotated mockup when the configured
+agent/tools support it. It records visual direction, screen states, responsive and
+accessibility behavior, motion, the libraries already available, and owner feedback.
+The frontend role then implements the reviewed direction and checks the rendered result.
+
+Export mockup images to docs/02-design/previews/<TASK-ID>/mockups/ and rendered screenshots to docs/02-design/previews/<TASK-ID>/screenshots/. The project design brief must name the supported device/browser/OS matrix and compare each target with its approved mockup; pixel-perfect status applies only to tested targets.
+
+Before writing components, agents must inspect manifests, lockfiles, local UI components,
+tokens and motion patterns. They should reuse an appropriate installed system such as
+the project's Tailwind setup, generated shadcn/ui components, or existing animation
+library; adding a new package or external design service requires a documented reason
+and the project's normal approval. The workflow can use a different visual reference
+for each project, while keeping the result original, accessible, responsive and fast.
+
+The workflow does not install Figma, create an account, or autonomously start agents.
+UASEF provides role/task instructions; you configure runner profiles and design tools,
+and explicitly dispatch tasks. A visual prototype is only available when the chosen
+agent or configured tool can create one. See [UI/UX preview and library discovery](docs/UI-UX-WORKFLOW.md).
 
 ## Table of contents
 
@@ -322,10 +366,15 @@ The command creates `specs/features/work-order-management/` containing `proposal
 
 **Step 3.2 — Create dependency-aware engineering tasks:**
 
+For a UI that needs design review, start with a UX task and make frontend implementation depend on its reviewed output. API work can proceed in parallel when independent. Follow the full [UI/UX preview workflow](docs/UI-UX-WORKFLOW.md) for library discovery, mockups, owner review and browser verification.
+
+The execution CLI now requires each newly created frontend-engineer task to provide --design-task UX-ID, which must be an approval-gated ux-designer task and is automatically added as a dependency, or --design-waiver with a specific 15-500 character reason. Existing tasks are preserved and are not retrofitted.
+
 ```powershell
 uasef task add DATA-001 --title "Work order schema and persistence" --role backend-engineer --skill feature-implementation --context specs/features/work-order-management/requirements.md --acceptance "Approved migration, validation and persistence tests pass"
 uasef task add API-001 --title "Work order REST API" --role backend-engineer --skill feature-implementation --depends DATA-001 --context specs/features/work-order-management/design.md --acceptance "API contract, authorization and integration tests pass"
-uasef task add UI-001 --title "Work order UI flow" --role frontend-engineer --skill feature-implementation --depends API-001 --acceptance "Accessible create/list/edit flows, error states and UI tests pass"
+uasef task add UX-001 --title "Review work order UI prototype" --role ux-designer --skill ux-design --context specs/features/work-order-management/requirements.md --acceptance "Owner reviews mockup images and target device matrix; library, motion and accessibility decisions are recorded" --approval-required
+uasef task add UI-001 --title "Work order UI flow" --role frontend-engineer --skill feature-implementation --design-task UX-001 --depends API-001 --acceptance "Reviewed create/list/edit flows, responsive/error states and UI checks pass"
 uasef task list
 uasef task tree
 ```
@@ -502,3 +551,28 @@ Paste these into a compatible coding assistant, **not** the UASEF CLI:
 **Repository layout:** `skills/` holds portable Agent Skills; `agents/` defines roles; `workflows/` and `policies/` define engineering processes; `templates/` contains project documents; `src/uasef/` implements the CLI, orchestration, sessions and OpenCode adapter; `tests/` holds framework tests.
 
 **Lifecycle:** `idea → research → approved requirements → architecture → vertical slices → tests → independent review → staging → approved production release → monitoring → improvement`.
+
+## Guided project setup
+
+Start with an interview instead of preparing command flags:
+
+```sh
+uasef init my-project --interactive
+```
+
+The wizard asks for the project folder, name, problem, users, first-version scope,
+excluded features, technology preferences, constraints, success criteria, and coding
+assistant. Press Enter to keep a default; undecided technology choices can remain
+"Help me choose". Review the answers, choose `edit` to revise them, or `create` to
+initialize. `cancel`, Ctrl+C, or end-of-input exits without creating project files.
+Do not include passwords or tokens in answers.
+
+Answers are retained in `docs/00-inception/idea-brief.md` and project metadata for
+the inception workflow. They are user declarations, not validated requirements or
+architecture approvals. All inception tasks remain pending. Then run
+`uasef next --project my-project` and ask your coding assistant to read `AGENTS.md`,
+use the captured intake, and ask only the remaining relevant questions.
+
+Use `--existing` deliberately for a nonempty folder. Existing initialization and
+file-preservation protections still apply. Scripted `uasef init my-project --idea
+"My idea"` remains noninteractive; the wizard does not require a model or network.

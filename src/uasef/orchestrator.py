@@ -49,6 +49,9 @@ def db(project):
       lease_token TEXT, lease_until TEXT, attempts INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
       parent_id TEXT REFERENCES tasks(id),
+      design_gate_required INTEGER NOT NULL DEFAULT 0,
+      design_task_id TEXT REFERENCES tasks(id),
+      design_waiver TEXT NOT NULL DEFAULT '',
       CHECK (status IN ('queued','running','awaiting_review','awaiting_approval',
                         'completed','failed','cancelled'))
     );
@@ -78,6 +81,13 @@ def db(project):
     # Upgrade pre-v0.3 databases without touching task history.
     if "parent_id" not in {row["name"] for row in conn.execute("PRAGMA table_info(tasks)")}:
         conn.execute("ALTER TABLE tasks ADD COLUMN parent_id TEXT REFERENCES tasks(id)")
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(tasks)")}
+    if "design_gate_required" not in columns:
+        conn.execute("ALTER TABLE tasks ADD COLUMN design_gate_required INTEGER NOT NULL DEFAULT 0")
+    if "design_task_id" not in columns:
+        conn.execute("ALTER TABLE tasks ADD COLUMN design_task_id TEXT REFERENCES tasks(id)")
+    if "design_waiver" not in columns:
+        conn.execute("ALTER TABLE tasks ADD COLUMN design_waiver TEXT NOT NULL DEFAULT ''")
     try:
         yield conn
     finally:
@@ -98,6 +108,7 @@ def as_dict(row):
     for field in ("context_paths", "dependencies"):
         task[field] = json.loads(task[field])
     task["needs_approval"] = bool(task["needs_approval"])
+    task["design_gate_required"] = bool(task.get("design_gate_required", 0))
     return task
 
 
@@ -109,7 +120,7 @@ def list_tasks(conn):
     return [as_dict(x) for x in conn.execute("SELECT * FROM tasks ORDER BY created_at,id")]
 
 
-def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(), context=(), approval=False, parent_id=None):
+def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(), context=(), approval=False, parent_id=None, design_task_id=None, design_waiver=""):
     if not TASK_ID.fullmatch(task_id) or len(task_id) > 80:
         raise ValueError("Task ID must be uppercase alphanumeric with hyphens (e.g. API-001)")
     if not title.strip() or not acceptance.strip():
@@ -120,6 +131,21 @@ def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(),
     if not (base / ".agents" / "skills" / skill / "SKILL.md").is_file():
         raise ValueError(f"Unknown skill {skill}")
     depends, context = list(dict.fromkeys(depends)), list(dict.fromkeys(context))
+    design_waiver = design_waiver.strip() if isinstance(design_waiver, str) else ""
+    design_gate_required = role == "frontend-engineer"
+    if design_gate_required:
+        if design_task_id and design_waiver:
+            raise ValueError("Choose --design-task or --design-waiver, not both")
+        if design_task_id:
+            design_task = task(conn, design_task_id)
+            if design_task["role"] != "ux-designer" or not design_task["needs_approval"]:
+                raise ValueError("--design-task must identify a UX task created with --approval-required")
+            if design_task_id not in depends:
+                depends.append(design_task_id)
+        elif not 15 <= len(design_waiver) <= 500:
+            raise ValueError("Frontend tasks need --design-task UX-ID or a 15-500 character --design-waiver reason")
+    elif design_task_id or design_waiver:
+        raise ValueError("--design-task and --design-waiver are only valid for frontend-engineer tasks")
     if task_id in depends:
         raise ValueError("Task may not depend on itself")
     if parent_id is not None:
@@ -142,9 +168,9 @@ def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(),
     t = timestamp()
     try:
         with conn:
-            conn.execute("INSERT INTO tasks(id,title,role,skill,acceptance,context_paths,dependencies,needs_approval,created_at,updated_at,parent_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                         (task_id,title,role,skill,acceptance,json.dumps(context),json.dumps(depends),int(approval),t,t,parent_id))
-            audit(conn, task_id, "created", detail=f"depends={depends}; approval={approval}; parent={parent_id}")
+            conn.execute("INSERT INTO tasks(id,title,role,skill,acceptance,context_paths,dependencies,needs_approval,created_at,updated_at,parent_id,design_gate_required,design_task_id,design_waiver) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                         (task_id,title,role,skill,acceptance,json.dumps(context),json.dumps(depends),int(approval),t,t,parent_id,int(design_gate_required),design_task_id,design_waiver))
+            audit(conn, task_id, "created", detail=f"depends={depends}; approval={approval}; parent={parent_id}; design_task={design_task_id or ''}; design_waiver={design_waiver}")
             if parent_id:
                 audit(conn, parent_id, "delegated", detail=f"child={task_id}; role={role}")
     except sqlite3.IntegrityError as e:
@@ -155,6 +181,16 @@ def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(),
 def eligible(conn, row):
     if row["status"] != "queued":
         return False
+    task_data = dict(row)
+    if task_data.get("design_gate_required"):
+        design_task_id = task_data.get("design_task_id")
+        waiver = task_data.get("design_waiver", "")
+        if design_task_id:
+            design = task(conn, design_task_id)
+            if design["role"] != "ux-designer" or not design["needs_approval"] or design["status"] != "completed":
+                return False
+        elif not waiver:
+            return False
     return all(task(conn, d)["status"] == "completed" for d in row["dependencies"])
 
 
@@ -210,7 +246,9 @@ def incomplete_children(conn, task_id):
     return [r["id"] for r in conn.execute("SELECT id FROM tasks WHERE parent_id=? AND status != 'completed' ORDER BY id", (task_id,))]
 
 
-def verify(conn, project, task_id, reviewer, evidence):
+def verify(conn, project, task_id, reviewer, evidence, verification=None):
+    from .verification import gate
+    receipt_hash = gate(project, verification)
     if not reviewer.strip() or reviewer.strip().lower() == "agent":
         raise ValueError("Specify the named reviewer; this is a local assertion, not authenticated")
     if not evidence:
@@ -234,6 +272,9 @@ def verify(conn, project, task_id, reviewer, evidence):
         status = "awaiting_approval" if t["needs_approval"] else "completed"
         conn.execute("UPDATE tasks SET status=?,updated_at=? WHERE id=?",(status,timestamp(),task_id))
         audit(conn,task_id,"verified",actor=reviewer,detail=json.dumps(evidence))
+        if verification:
+            audit(conn, task_id, "verification_receipt", actor=reviewer,
+                  detail=json.dumps({"id": verification, "sha256": receipt_hash}))
         conn.commit()
         return status
     except Exception:

@@ -28,7 +28,9 @@ uasef task list
 
 Tasks may depend on other completed tasks (`--depends API-001`), point to existing safe project documents (`--context docs/01-product/prd.md`), or require approval (`--approval-required`).
 
-## 2. Manual mode — safe by default
+Newly created tasks with role frontend-engineer must use --design-task UX-ID or --design-waiver REASON. The design task must have role ux-designer and require approval; UASEF automatically adds it as a dependency and blocks frontend dispatch until it is verified and approved. A waiver reason is stored on the task and included in its agent prompt. The additive database migration leaves existing tasks ungated to preserve their current work. Actor names remain unauthenticated local assertions.
+
+## 2. Manual mode - safe by default
 
 ```bash
 uasef dispatch API-001 --profile manual

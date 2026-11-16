@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased - UI/UX preview and library-first frontend workflow
+
+- Add a review gate and workflow for clickable prototypes or annotated mockups before UI implementation.
+- Require inspection and documented reuse of installed component, styling and motion systems before custom UI code or new dependencies.
+- Add guidance for purposeful animation, reduced motion, responsive/accessibility states, owner feedback and rendered-browser verification.
+- Connect the workflow to UX/frontend role contracts, design templates, project charter and routing documentation.
+- Require newly created frontend execution tasks to depend on an approval-gated UX task or record an explicit waiver; preserve existing tasks during additive migration.
+- Standardize exported mockups and screenshots under docs/02-design/previews/<TASK-ID>/ and define named-device visual comparison evidence.
+
+
+## Unreleased — Core milestone planning
+
+- Establish CORE-VD-001 (Verified Delivery) as the next core engineering milestone.
+- Define phases, dependencies, owners, acceptance evidence and audit-finding traceability across verification, CI/CD, deployment, operations and conditional web quality.
+- Register the milestone in framework metadata and link its plan from the README; no runtime behavior or release version changes.
+
+## Unreleased - v0.5-v0.7 roadmap foundations
+
+- Add versioned UASEF-state backup/restore with checksums, path validation and SQLite snapshots.
+- Exercise inception/database migrations and abrupt worker interruption recovery.
+- Add explicit commit-bound verification commands and an opt-in required review gate.
+- Add chronological memory timelines, structural conflict reports and incremental FTS5 search.
+- Provide an explicit real OpenCode artifact test; provider-backed acceptance remains pending a configured model.
+
 ## Unreleased - Coding standards and SEO
 
 - Add practical coding standards and a proportional complexity review for maintainable, reliable implementation without speculative abstractions.
@@ -60,3 +84,7 @@
 - Added portable project scaffolding adapters and offline workflow CLI.
 - Added task state, evidence paths, structural validation, feature scaffolds and model-handoff summaries.
 - Added unit tests and CI; clarified limitations of non-autonomous execution.
+
+### Guided initialization
+- Added `uasef init --interactive` (`-i`) with a plain-language intake, editable review, and cancellation before creating files.
+- Captured answers carry into inception without automatically completing tasks or approving architecture; existing scripted initialization remains supported.

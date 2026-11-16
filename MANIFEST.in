@@ -1,3 +1,4 @@
+include docs/VERIFIED-DELIVERY-MILESTONE.md
 include framework.json lefthook.yml
 recursive-include agents *.md *.json *.yaml *.yml
 recursive-include skills *.md *.json *.yaml *.yml

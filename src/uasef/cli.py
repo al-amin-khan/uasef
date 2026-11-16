@@ -130,7 +130,17 @@ def install_adapter(root, project, adapter):
             write_if_missing(project / ".github" / "agents" / (role.stem + ".agent.md"), copy_text)
 
 
+def install_project_workflows(root, project):
+    """Install portable workflow guidance without replacing project customizations."""
+    for workflow in sorted((root / "workflows").glob("*.md")):
+        copy_if_missing(workflow, project / ".uasef" / "workflows" / workflow.name)
+
+
 def init(args):
+    if getattr(args, "interactive", False):
+        from .intake import collect
+        if not collect(args):
+            return 0
     root = framework_root()
     p = Path(args.path).resolve()
     sp = state_path(p)
@@ -175,6 +185,9 @@ def init(args):
         copy_if_missing(policy, p / ".uasef" / "policies" / policy.name)
     for role in (root / "agents").glob("*.md"):
         copy_if_missing(role, p / ".uasef" / "roles" / role.name)
+    install_project_workflows(root, p)
+    copy_if_missing(root / "templates" / "docs" / "02-design" / "previews" / "README.md",
+                    p / "docs" / "02-design" / "previews" / "README.md")
     # Canonical .agents/skills is always installed; other adapters optional.
     install_adapter(root, p, "codex")
     if args.adapter != "codex":
@@ -185,7 +198,7 @@ def init(args):
     log(state, "init", note=f"adapter={args.adapter}")
     # Execution state is project-local and deliberately excluded from Git by default.
     write_if_missing(p / ".uasef" / "runners.json", (root / "templates" / "runners.json").read_text(encoding="utf-8"))
-    write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\n")
+    write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\nverification/\nmemory-search.sqlite3*\n")
     save(p, state)
     from .memory import initialize, sync
     initialize(p, idea)
@@ -206,12 +219,18 @@ def upgrade(args):
         copy_if_missing(policy, p / ".uasef" / "policies" / policy.name)
     for role in (root / "agents").glob("*.md"):
         copy_if_missing(role, p / ".uasef" / "roles" / role.name)
+    install_project_workflows(root, p)
+    copy_if_missing(root / "templates" / "docs" / "02-design" / "previews" / "README.md",
+                    p / "docs" / "02-design" / "previews" / "README.md")
     install_adapter(root,p,"codex")
     if args.adapter != "codex":
         install_adapter(root,p,args.adapter)
     write_if_missing(p / ".uasef" / "runners.json", (root / "templates" / "runners.json").read_text(encoding="utf-8"))
     write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\n")
     ignored=p / ".uasef" / ".gitignore"
+    for pattern in ("verification/", "memory-search.sqlite3*"):
+        if pattern not in ignored.read_text(encoding="utf-8").splitlines():
+            with ignored.open("a", encoding="utf-8") as f: f.write("\n" + pattern + "\n")
     if "sessions/" not in ignored.read_text(encoding="utf-8").splitlines():
         with ignored.open("a", encoding="utf-8") as f: f.write("\nsessions/\n")
     state["framework_version"] = VERSION
@@ -389,7 +408,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(prog="uasef", description="Portable AI engineering inception framework (local task state)")
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("init", help="Initialize a project without overwriting existing files")
-    p.add_argument("path"); p.add_argument("--name"); p.add_argument("--idea")
+    p.add_argument("path", nargs="?", default="."); p.add_argument("--name"); p.add_argument("--idea")
+    p.add_argument("--interactive", "-i", action="store_true", help="Ask questions and review answers before creating files")
     p.add_argument("--git-hooks", action="store_true", help="Copy optional Lefthook/Cocogitto configuration; never install hooks")
     p.add_argument("--existing", action="store_true", help="Allow an existing nonempty project; never overwrite")
     p.add_argument("--adapter", choices=("codex", "claude", "copilot", "opencode", "all"), default="all")
@@ -418,6 +438,10 @@ def main(argv=None):
     attach(sub)
     attach_sessions(sub)
     attach_memory(sub)
+    from .backup import attach as attach_backup
+    attach_backup(sub)
+    from .verification import attach as attach_verification
+    attach_verification(sub)
     from .doctor import run as doctor
     q = sub.add_parser("doctor", help="Read-only setup and project diagnostics")
     q.add_argument("--project", default=".")

@@ -108,7 +108,8 @@
         "INIT-008"
       ],
       "outputs": [
-        "docs/02-design/design-brief.md"
+        "docs/02-design/design-brief.md",
+        "docs/02-design/previews/README.md"
       ],
       "approval_required": false
     },

@@ -16,6 +16,10 @@ TODO: Provide specific findings, decisions, references, and traceability for thi
 
 TODO: Provide specific findings, decisions, references, and traceability for this section.
 
+## Prototype and design review
+
+TODO: Link the visual mockup or clickable prototype, note how to open it, identify mock data/unfinished states, and record the owner's requested changes or approval before implementation.
+
 ## Permissions and error states
 
 TODO: Provide specific findings, decisions, references, and traceability for this section.

@@ -15,5 +15,15 @@
   "agent_runtime": "manual prompts or opt-in configured subprocess CLI",
   "execution_mode": "explicit opt-in; human-supervised with independent review",
   "orchestration": "SQLite transactional execution tasks, leases, retries, verification and approvals",
-  "project_memory": "Git-versioned append-only records in docs/project-memory; requirements, decisions, tasks, commits and evidence"
+  "project_memory": "Git-versioned append-only records in docs/project-memory; requirements, decisions, tasks, commits and evidence",
+  "core_milestones": [
+    {
+      "id": "CORE-VD-001",
+      "name": "Verified Delivery",
+      "status": "planned",
+      "plan": "docs/VERIFIED-DELIVERY-MILESTONE.md",
+      "execution": "planning metadata only; no automatic execution",
+      "release_version": null
+    }
+  ]
 }
