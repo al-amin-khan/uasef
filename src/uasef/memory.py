@@ -257,7 +257,13 @@ def sync(project):
         return
     with closing(sqlite3.connect(dbpath.as_uri() + "?mode=ro", uri=True)) as conn:
         conn.row_factory = sqlite3.Row
-        for t in conn.execute("SELECT id,title,status,acceptance,dependencies,parent_id FROM tasks"):
+        # Memory export is read-only and may precede execution-schema migration.
+        columns = {r["name"] for r in conn.execute("PRAGMA table_info(tasks)")}
+        fields = ["id", "title", "status", "acceptance", "dependencies"]
+        for name, default in (("parent_id", "NULL"), ("design_gate_required", "0"),
+                              ("design_task_id", "NULL"), ("design_waiver", "''")):
+            fields.append(name if name in columns else f"{default} AS {name}")
+        for t in conn.execute("SELECT " + ",".join(fields) + " FROM tasks"):
             snap = dict(t)
             digest = hashlib.sha256(json.dumps(snap, sort_keys=True).encode()).hexdigest()
             version = conn.execute("SELECT max(id) FROM audit WHERE task_id=?", (t["id"],)).fetchone()[0]

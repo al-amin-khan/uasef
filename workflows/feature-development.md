@@ -5,6 +5,8 @@
 ## Procedure
 Identify/confirm REQ, create feature package, research reuse, contract-first design, implement a thin slice, run tests, independent review, release with approval.
 
+For features with a new or materially changed UI, follow [UI/UX preview before frontend implementation](ui-ux-preview.md): inspect existing UI and motion libraries, create a reviewable mockup/prototype, wait for owner review unless the owner explicitly waives it, then implement and verify rendered behavior. Choose UX-first, frontend-first, or vertical-slice sequencing from the user's preference and actual contract dependencies.
+
 ## Required controls
 - Read `AGENTS.md`, policy files and the authoritative task/specification state.
 - Apply `.uasef/policies/coding-standards.md` before implementation and during review; justify added complexity in existing verification notes. Determine SEO applicability and follow `.uasef/policies/seo.md` for affected public pages.

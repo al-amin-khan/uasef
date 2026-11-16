@@ -71,6 +71,53 @@ class OrchestrationTests(unittest.TestCase):
         self.assertEqual(self.invoke("task","approve","TASK-001","--actor","Owner","--note","Approved risk and implementation","--project",str(self.p)),0,self.message)
         with o.db(self.p) as conn:self.assertTrue(o.eligible(conn,o.task(conn,"TASK-002")))
 
+    def add_ux(self):
+        command=["task","add","UX-001","--title","Prepare UI preview","--role","ux-designer",
+                 "--skill","ux-design","--acceptance","Owner reviews the saved mockup and design notes",
+                 "--approval-required","--project",str(self.p)]
+        self.assertEqual(self.invoke(*command),0,self.message)
+
+    def add_frontend(self,*extra):
+        command=["task","add","UI-001","--title","Implement approved UI","--role","frontend-engineer",
+                 "--skill","feature-implementation","--acceptance","Implement and verify the approved screen",
+                 "--project",str(self.p),*extra]
+        return self.invoke(*command)
+
+    def test_frontend_requires_approved_design_task_or_explicit_waiver(self):
+        self.assertEqual(self.add_frontend(),2)
+        self.assertIn("--design-task UX-ID",self.message)
+        self.assertEqual(self.add_frontend("--design-waiver","Small spacing correction with no meaningful visual redesign"),0,self.message)
+        with o.db(self.p) as conn:
+            ui=o.task(conn,"UI-001")
+            self.assertEqual(ui["design_waiver"],"Small spacing correction with no meaningful visual redesign")
+            self.assertTrue(o.eligible(conn,ui))
+
+    def test_frontend_design_dependency_waits_for_owner_approval(self):
+        self.add_ux()
+        self.assertEqual(self.add_frontend("--design-task","UX-001"),0,self.message)
+        with o.db(self.p) as conn:
+            ui=o.task(conn,"UI-001")
+            self.assertEqual(ui["design_task_id"],"UX-001")
+            self.assertIn("UX-001",ui["dependencies"])
+            self.assertFalse(o.eligible(conn,ui))
+        self.assertEqual(self.invoke("task","submit","UX-001","--actor","ux-agent","--evidence","docs/evidence/review.md","--project",str(self.p)),0,self.message)
+        self.assertEqual(self.invoke("task","verify","UX-001","--reviewer","qa-reviewer","--evidence","docs/evidence/review.md","--project",str(self.p)),0,self.message)
+        with o.db(self.p) as conn:
+            self.assertEqual(o.task(conn,"UX-001")["status"],"awaiting_approval")
+            self.assertFalse(o.eligible(conn,o.task(conn,"UI-001")))
+        self.assertEqual(self.invoke("task","approve","UX-001","--actor","Project Owner","--note","Reviewed the exported preview and approved this design","--project",str(self.p)),0,self.message)
+        with o.db(self.p) as conn:
+            self.assertEqual(o.task(conn,"UX-001")["status"],"completed")
+            self.assertTrue(o.eligible(conn,o.task(conn,"UI-001")))
+
+    def test_frontend_design_gate_rejects_unapproved_or_non_ux_task(self):
+        self.add()
+        self.assertEqual(self.add_frontend("--design-task","TASK-001"),2)
+        self.assertIn("UX task created with --approval-required",self.message)
+        self.add_ux()
+        self.assertEqual(self.add_frontend("--design-task","UX-001","--design-waiver","This should be rejected because both options were supplied"),2)
+        self.assertIn("Choose --design-task or --design-waiver",self.message)
+
     def test_runner_error_retry_and_audit(self):
         self.add()
         self.profile(exit_code=7)

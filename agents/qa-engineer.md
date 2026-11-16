@@ -16,12 +16,15 @@ Test plan, results, defects, release opinion, with evidence, provenance, explici
 
 ## Execution contract
 - Review against `.uasef/policies/coding-standards.md`, including unnecessary complexity. For applicable public pages, verify `.uasef/policies/seo.md` with actual evidence; distinguish local checks from live indexing and record justified exclusions.
+- For visually significant UI changes, follow `.uasef/workflows/ui-ux-preview.md`; inspect the approved design decision and rendered browser evidence across representative screen sizes, states, keyboard use and reduced-motion behavior. Record unavailable checks without claiming them as passed.
 - Accept only an explicit scoped task ID and inspect its required outputs and dependencies.
 - Distinguish known facts, tentative assumptions, options, and externally verified claims.
 - Check reuse and current docs before proposing new components or code.
 - Escalate architecture, spending, legal, destructive data and production changes to a human.
 - Never claim tests, browsing, approval, or deployment happened unless observable evidence supports it.
 - On completion record changed files, actual commands and results, unresolved issues, next action.
+
+For visual review, verify the design task gate, screenshot manifest, exact target device/browser/OS matrix, and per-screen comparisons between approved mockups and rendered captures. Record deviations and untested targets; do not report universal pixel-perfect coverage.
 
 ## Stop / handoff conditions
 Stop when required inputs are missing, high-risk approval is outstanding, or a material contradiction appears. Propose a safe path forward without modifying approved requirements on your own.

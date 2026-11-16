@@ -130,6 +130,12 @@ def install_adapter(root, project, adapter):
             write_if_missing(project / ".github" / "agents" / (role.stem + ".agent.md"), copy_text)
 
 
+def install_project_workflows(root, project):
+    """Install portable workflow guidance without replacing project customizations."""
+    for workflow in sorted((root / "workflows").glob("*.md")):
+        copy_if_missing(workflow, project / ".uasef" / "workflows" / workflow.name)
+
+
 def init(args):
     if getattr(args, "interactive", False):
         from .intake import collect
@@ -179,6 +185,9 @@ def init(args):
         copy_if_missing(policy, p / ".uasef" / "policies" / policy.name)
     for role in (root / "agents").glob("*.md"):
         copy_if_missing(role, p / ".uasef" / "roles" / role.name)
+    install_project_workflows(root, p)
+    copy_if_missing(root / "templates" / "docs" / "02-design" / "previews" / "README.md",
+                    p / "docs" / "02-design" / "previews" / "README.md")
     # Canonical .agents/skills is always installed; other adapters optional.
     install_adapter(root, p, "codex")
     if args.adapter != "codex":
@@ -210,6 +219,9 @@ def upgrade(args):
         copy_if_missing(policy, p / ".uasef" / "policies" / policy.name)
     for role in (root / "agents").glob("*.md"):
         copy_if_missing(role, p / ".uasef" / "roles" / role.name)
+    install_project_workflows(root, p)
+    copy_if_missing(root / "templates" / "docs" / "02-design" / "previews" / "README.md",
+                    p / "docs" / "02-design" / "previews" / "README.md")
     install_adapter(root,p,"codex")
     if args.adapter != "codex":
         install_adapter(root,p,args.adapter)

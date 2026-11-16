@@ -11,9 +11,9 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run(argv, cwd, env):
+def run(argv, cwd, env, input_text=None):
     result = subprocess.run([str(x) for x in argv], cwd=cwd, env=env,
-                            capture_output=True, encoding="utf-8", errors="replace")
+                            capture_output=True, encoding="utf-8", errors="replace", input=input_text)
     if result.returncode:
         raise RuntimeError(f"Command failed: {argv}\n{result.stdout}\n{result.stderr}")
     return result.stdout
@@ -35,7 +35,7 @@ def main():
                     if source.is_file() and source.suffix in (".md", ".json", ".yaml", ".yml"):
                         name = "uasef/_resources/" + source.relative_to(ROOT).as_posix()
                         assert archive.read(name) == source.read_bytes(), name
-            for name in ("framework.json", "lefthook.yml"):
+            for name in ("framework.json", "lefthook.yml", "docs/VERIFIED-DELIVERY-MILESTONE.md"):
                 assert archive.read("uasef/_resources/" + name) == (ROOT / name).read_bytes()
         environment = base / "environment"
         venv.EnvBuilder(with_pip=True).create(environment)
@@ -51,10 +51,19 @@ def main():
         assert list((project / ".agents" / "skills").glob("*/SKILL.md"))
         assert list((project / ".uasef" / "roles").glob("*.md"))
         assert (project / "lefthook.yml").is_file()
+        assert (project / ".uasef/workflows/production-release.md").is_file()
+        assert (project / "docs/02-design/previews/README.md").is_file()
+        guided = base / "guided project"
+        answers = ["", "", "Check guided installation"] + [""] * 7 + ["create"]
+        run([cli, "init", guided, "--interactive"], base, env, "\n".join(answers) + "\n")
+        assert "Check guided installation" in (guided / "docs/00-inception/idea-brief.md").read_text(encoding="utf-8")
+        workflow = project / ".uasef/workflows/production-release.md"
+        workflow.write_text("Owner release procedure\n", encoding="utf-8")
         charter = project / "AGENTS.md"
         charter.write_text("Owner customization\n", encoding="utf-8")
         run([cli, "upgrade", "--git-hooks"], project, env)
         assert charter.read_text() == "Owner customization\n"
+        assert workflow.read_text() == "Owner release procedure\n"
         report = json.loads(run([cli, "doctor", "--json"], project, env))
         assert report["healthy"], report
         assert "Verify standalone packaging" in run([cli, "memory", "brief"], project, env)

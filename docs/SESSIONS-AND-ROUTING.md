@@ -24,6 +24,10 @@ uasef task tree
 
 Child tasks carry a parent ID and are audited. Parent review and approval are blocked until all direct children complete, and descendants are transitively blocked. Delegation depth is bounded. No autonomous subagent is spawned automatically: task creation and external CLI dispatch are separate.
 
+For UI work, create a UX task (`--role ux-designer --skill ux-design`) and a frontend task (`--role frontend-engineer`) with the UI task depending on the reviewed design when sequential. See [UI/UX preview workflow](UI-UX-WORKFLOW.md). Separate task roles do not create separate agents by themselves; configure runner profiles and dispatch each task explicitly.
+
+New frontend-engineer tasks enforce this relationship with --design-task UX-ID; the UX task must require approval and becomes an automatic dependency. Use --design-waiver only with a specific reason for an explicitly waived or trivial UI change. Approval actor names are not authenticated.
+
 ## 3. Model/profile routing
 
 Example `.uasef/runners.json`:

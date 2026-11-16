@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased - UI/UX preview and library-first frontend workflow
+
+- Add a review gate and workflow for clickable prototypes or annotated mockups before UI implementation.
+- Require inspection and documented reuse of installed component, styling and motion systems before custom UI code or new dependencies.
+- Add guidance for purposeful animation, reduced motion, responsive/accessibility states, owner feedback and rendered-browser verification.
+- Connect the workflow to UX/frontend role contracts, design templates, project charter and routing documentation.
+- Require newly created frontend execution tasks to depend on an approval-gated UX task or record an explicit waiver; preserve existing tasks during additive migration.
+- Standardize exported mockups and screenshots under docs/02-design/previews/<TASK-ID>/ and define named-device visual comparison evidence.
+
+
 ## Unreleased — Core milestone planning
 
 - Establish CORE-VD-001 (Verified Delivery) as the next core engineering milestone.

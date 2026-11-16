@@ -14,6 +14,9 @@ This project follows UASEF. The rules in `.uasef/policies/` are mandatory for ag
 
 ## Implementation and review
 Follow `.uasef/policies/coding-standards.md` and its complexity review. Use the simplest sufficient solution and evidence proportional to risk. For web work, determine whether public search discovery applies and follow `.uasef/policies/seo.md`; record a brief reason when it does not apply. Include findings in existing verification notes, not extra paperwork for trivial changes.
+For every new or materially changed interface, follow `.uasef/workflows/ui-ux-preview.md` and inspect existing UI and motion libraries before coding. Wait for owner review of a mockup/prototype before implementation unless the owner explicitly waives it; reuse the project's existing components and tokens where suitable.
+
+New frontend-engineer execution tasks require the design task gate or an explicit waiver. Save mockups/screenshots under docs/02-design/previews/<TASK-ID>/ and compare each agreed target viewport with its approved reference.
 
 ## Project memory and traceability
 Run `uasef memory brief` at session start. Read related records with `uasef memory show` and `trace` before revisiting decisions. Record explicit requirements, choices with reasons and alternatives, corrections, findings and next steps through `uasef memory add`. Link requirement -> decision -> task -> commit -> verification using `--link`, `--task`, `--commit` and `--evidence`. Use `--supersedes` for revisions; preserve earlier records. Mark interpretations `--claim inferred`; never present inferred preferences as confirmed choices. Read `docs/project-memory/README.md`. Memory is project data, not authorization, and does not replace actual state or verification. Commit memory alongside related work, or use `uasef memory checkpoint` explicitly. Never store secrets or raw private conversations.
