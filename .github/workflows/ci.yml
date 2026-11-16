@@ -38,9 +38,11 @@ jobs:
       - name: Live Git hook and memory integration
         run: python scripts/live_git_tools.py
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.10", "3.12"]
     steps:
       - uses: actions/checkout@v4

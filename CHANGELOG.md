@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased - v0.5-v0.7 roadmap foundations
+
+- Add versioned UASEF-state backup/restore with checksums, path validation and SQLite snapshots.
+- Exercise inception/database migrations and abrupt worker interruption recovery.
+- Add explicit commit-bound verification commands and an opt-in required review gate.
+- Add chronological memory timelines, structural conflict reports and incremental FTS5 search.
+- Provide an explicit real OpenCode artifact test; provider-backed acceptance remains pending a configured model.
+
 ## Unreleased - Coding standards and SEO
 
 - Add practical coding standards and a proportional complexity review for maintainable, reliable implementation without speculative abstractions.

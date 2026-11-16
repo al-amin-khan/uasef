@@ -185,7 +185,7 @@ def init(args):
     log(state, "init", note=f"adapter={args.adapter}")
     # Execution state is project-local and deliberately excluded from Git by default.
     write_if_missing(p / ".uasef" / "runners.json", (root / "templates" / "runners.json").read_text(encoding="utf-8"))
-    write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\n")
+    write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\nverification/\nmemory-search.sqlite3*\n")
     save(p, state)
     from .memory import initialize, sync
     initialize(p, idea)
@@ -212,6 +212,9 @@ def upgrade(args):
     write_if_missing(p / ".uasef" / "runners.json", (root / "templates" / "runners.json").read_text(encoding="utf-8"))
     write_if_missing(p / ".uasef" / ".gitignore", "orchestration.sqlite3*\nruns/\nworktrees/\nsessions/\n")
     ignored=p / ".uasef" / ".gitignore"
+    for pattern in ("verification/", "memory-search.sqlite3*"):
+        if pattern not in ignored.read_text(encoding="utf-8").splitlines():
+            with ignored.open("a", encoding="utf-8") as f: f.write("\n" + pattern + "\n")
     if "sessions/" not in ignored.read_text(encoding="utf-8").splitlines():
         with ignored.open("a", encoding="utf-8") as f: f.write("\nsessions/\n")
     state["framework_version"] = VERSION
@@ -418,6 +421,10 @@ def main(argv=None):
     attach(sub)
     attach_sessions(sub)
     attach_memory(sub)
+    from .backup import attach as attach_backup
+    attach_backup(sub)
+    from .verification import attach as attach_verification
+    attach_verification(sub)
     from .doctor import run as doctor
     q = sub.add_parser("doctor", help="Read-only setup and project diagnostics")
     q.add_argument("--project", default=".")

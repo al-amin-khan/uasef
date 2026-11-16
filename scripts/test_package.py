@@ -59,6 +59,15 @@ def main():
         assert report["healthy"], report
         assert "Verify standalone packaging" in run([cli, "memory", "brief"], project, env)
         run([cli, "memory", "validate"], project, env)
+        run([cli, "memory", "timeline"], project, env)
+        run([cli, "memory", "conflicts"], project, env)
+        run([cli, "memory", "search", "standalone"], project, env)
+        archive = base / "state.zip"
+        run([cli, "backup", archive], project, env)
+        restored = base / "restored"
+        run([cli, "restore", archive, restored], base, env)
+        run([cli, "upgrade"], restored, env)
+        assert "Verify standalone packaging" in run([cli, "memory", "brief"], restored, env)
         run([python, "-I", "-m", "uasef", "--help"], base, env)
         print("PASS: sdist-built wheel, exact resource bytes, isolated install, init, upgrade, doctor and memory")
 

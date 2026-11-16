@@ -43,6 +43,8 @@ def run(args):
 def attach(sub):
     p = sub.add_parser("memory", help="Portable project memory and Git traceability")
     actions = p.add_subparsers(dest="memory_action", required=True)
+    from .memory_query import attach as attach_query
+    attach_query(actions)
     for name in ("init", "sync", "brief", "list", "show", "trace", "validate", "checkpoint", "add"):
         q = actions.add_parser(name)
         q.add_argument("--project", default=".")

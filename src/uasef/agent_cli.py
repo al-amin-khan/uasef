@@ -36,7 +36,7 @@ def details(args):
 
 def verify(args):
     with orch.db(args.project) as conn:
-        result=orch.verify(conn,args.project,args.id,args.reviewer,args.evidence)
+        result=orch.verify(conn,args.project,args.id,args.reviewer,args.evidence,args.verification)
     print(f"Review recorded: {args.id} -> {result}. Local reviewer identity is not authenticated.")
 
 
@@ -230,6 +230,7 @@ def attach(sub):
         q=actions.add_parser(name)
         if name in ("show","verify","submit","approve","retry"):q.add_argument("id")
         if name=="verify":
+            q.add_argument("--verification", help="Passing verification receipt for the current clean commit")
             q.add_argument("--reviewer",required=True);q.add_argument("--evidence",action="append",required=True)
         if name=="submit":
             q.add_argument("--actor",required=True);q.add_argument("--evidence",action="append",required=True)
