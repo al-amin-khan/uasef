@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Core milestone planning
+
+- Establish CORE-VD-001 (Verified Delivery) as the next core engineering milestone.
+- Define phases, dependencies, owners, acceptance evidence and audit-finding traceability across verification, CI/CD, deployment, operations and conditional web quality.
+- Register the milestone in framework metadata and link its plan from the README; no runtime behavior or release version changes.
+
 ## Unreleased - v0.5-v0.7 roadmap foundations
 
 - Add versioned UASEF-state backup/restore with checksums, path validation and SQLite snapshots.

@@ -4,6 +4,21 @@
 
 > **Starting with only an idea?** Follow [the complete zero-to-production walkthrough](#complete-walkthrough-from-zero-prompt-to-production). UASEF is a workflow coordinator, **not** an autonomous one-prompt software factory. An installed AI coding agent does the research and coding; you review important decisions and verify results.
 
+## Core milestone: Verified Delivery
+
+**Planned:** [CORE-VD-001 — Verified Delivery](docs/VERIFIED-DELIVERY-MILESTONE.md).
+The next core milestone connects approved requirements to checked commits,
+protected CI, reproducible staging releases, operational evidence and rehearsed
+recovery. It includes coordinator correctness, required verification, application
+CI/CD, deployment/data safety, conditional SEO/accessibility/performance checks,
+and resumable project setup.
+
+The plan defines eight phases (VD-00 through VD-07), dependencies, responsible
+roles and measurable acceptance gates. It reuses the existing roadmap work in
+[PR #7](https://github.com/al-amin-khan/uasef/pull/7), guided initialization and
+reviewed UI/UX work. These are planned outcomes, not claims of completed automation;
+production deployment and paid-provider execution retain their authorization gates.
+
 ## Git-backed project memory (v0.4)
 
 New reliability commands: `uasef backup`, `restore`, `verification run/check`,
