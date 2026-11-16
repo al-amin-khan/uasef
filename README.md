@@ -507,3 +507,28 @@ Paste these into a compatible coding assistant, **not** the UASEF CLI:
 **Repository layout:** `skills/` holds portable Agent Skills; `agents/` defines roles; `workflows/` and `policies/` define engineering processes; `templates/` contains project documents; `src/uasef/` implements the CLI, orchestration, sessions and OpenCode adapter; `tests/` holds framework tests.
 
 **Lifecycle:** `idea → research → approved requirements → architecture → vertical slices → tests → independent review → staging → approved production release → monitoring → improvement`.
+
+## Guided project setup
+
+Start with an interview instead of preparing command flags:
+
+```sh
+uasef init my-project --interactive
+```
+
+The wizard asks for the project folder, name, problem, users, first-version scope,
+excluded features, technology preferences, constraints, success criteria, and coding
+assistant. Press Enter to keep a default; undecided technology choices can remain
+"Help me choose". Review the answers, choose `edit` to revise them, or `create` to
+initialize. `cancel`, Ctrl+C, or end-of-input exits without creating project files.
+Do not include passwords or tokens in answers.
+
+Answers are retained in `docs/00-inception/idea-brief.md` and project metadata for
+the inception workflow. They are user declarations, not validated requirements or
+architecture approvals. All inception tasks remain pending. Then run
+`uasef next --project my-project` and ask your coding assistant to read `AGENTS.md`,
+use the captured intake, and ask only the remaining relevant questions.
+
+Use `--existing` deliberately for a nonempty folder. Existing initialization and
+file-preservation protections still apply. Scripted `uasef init my-project --idea
+"My idea"` remains noninteractive; the wizard does not require a model or network.

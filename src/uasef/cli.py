@@ -131,6 +131,10 @@ def install_adapter(root, project, adapter):
 
 
 def init(args):
+    if getattr(args, "interactive", False):
+        from .intake import collect
+        if not collect(args):
+            return 0
     root = framework_root()
     p = Path(args.path).resolve()
     sp = state_path(p)
@@ -392,7 +396,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(prog="uasef", description="Portable AI engineering inception framework (local task state)")
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("init", help="Initialize a project without overwriting existing files")
-    p.add_argument("path"); p.add_argument("--name"); p.add_argument("--idea")
+    p.add_argument("path", nargs="?", default="."); p.add_argument("--name"); p.add_argument("--idea")
+    p.add_argument("--interactive", "-i", action="store_true", help="Ask questions and review answers before creating files")
     p.add_argument("--git-hooks", action="store_true", help="Copy optional Lefthook/Cocogitto configuration; never install hooks")
     p.add_argument("--existing", action="store_true", help="Allow an existing nonempty project; never overwrite")
     p.add_argument("--adapter", choices=("codex", "claude", "copilot", "opencode", "all"), default="all")
