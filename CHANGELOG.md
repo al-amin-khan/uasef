@@ -54,3 +54,7 @@
 - Added portable project scaffolding adapters and offline workflow CLI.
 - Added task state, evidence paths, structural validation, feature scaffolds and model-handoff summaries.
 - Added unit tests and CI; clarified limitations of non-autonomous execution.
+
+### Guided initialization
+- Added `uasef init --interactive` (`-i`) with a plain-language intake, editable review, and cancellation before creating files.
+- Captured answers carry into inception without automatically completing tasks or approving architecture; existing scripted initialization remains supported.
