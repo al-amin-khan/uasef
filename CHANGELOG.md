@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased - Coordinator correctness (VD-01, first increment)
+
+- Return nonzero CLI results for failed/blocked single and bulk dispatch while preserving original runner outcomes.
+- Feed generic runners from the prompt file so unread stdin pipes cannot bypass Windows subprocess timeouts.
+- Reject combined dependency/delegation cycles atomically, including transitive parent/child deadlocks.
+- Add real-process regression coverage for failures, timeouts, missing programs, mixed-result batches and valid sibling ordering.
+- Readiness gates and managed process-tree cancellation remain planned; this is not completion of all VD-01 work.
+
 ## Unreleased - UI/UX preview and library-first frontend workflow
 
 - Add a review gate and workflow for clickable prototypes or annotated mockups before UI implementation.

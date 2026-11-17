@@ -20,10 +20,11 @@
     {
       "id": "CORE-VD-001",
       "name": "Verified Delivery",
-      "status": "planned",
+      "status": "in_progress",
       "plan": "docs/VERIFIED-DELIVERY-MILESTONE.md",
       "execution": "planning metadata only; no automatic execution",
-      "release_version": null
+      "release_version": null,
+      "progress": "docs/VERIFIED-DELIVERY-PROGRESS.md"
     }
   ]
 }

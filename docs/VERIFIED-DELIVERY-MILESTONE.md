@@ -1,7 +1,7 @@
 # Core milestone: Verified Delivery
 
 **ID:** CORE-VD-001  
-**Status:** Planned — scope accepted; implementation and acceptance pending  
+**Status:** In progress — consolidation complete; further implementation and acceptance pending  
 **Established:** 2026-11-16  
 **Accountable owner:** Project maintainer  
 **Release version:** Unassigned; completion evidence determines release readiness
@@ -21,6 +21,8 @@ must follow the applicable project authorization and review requirements.
 Source: [engineering audit, 16 November 2026](https://chatgpt.com/library?file_id=libfile_f36fdebcd37c8191823b0674a842bf68&account_id=personal).
 The audit is a dated baseline; recheck repository and branch state before starting.
 
+Current implementation and evidence are tracked in [Delivery progress](VERIFIED-DELIVERY-PROGRESS.md).
+
 ## Existing work to reuse
 
 - [PR #7](https://github.com/al-amin-khan/uasef/pull/7) contains state backup/restore,
@@ -37,7 +39,7 @@ The audit is a dated baseline; recheck repository and branch state before starti
 
 ## Delivery phases and dependencies
 
-All phase statuses start as **planned**. A phase becomes complete only when its
+Phase status is maintained in the linked progress record. A phase becomes complete only when its
 acceptance evidence has been reviewed. Existing implementation may satisfy part
 of a phase but does not automatically close it.
 
