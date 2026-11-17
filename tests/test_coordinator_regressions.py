@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from uasef import cli, orchestrator as o
+from uasef import cli, executor, orchestrator as o
 
 
 class CoordinatorRegression(unittest.TestCase):
@@ -57,6 +57,21 @@ class CoordinatorRegression(unittest.TestCase):
             with o.db(self.p) as conn:
                 row = conn.execute('SELECT exit_code FROM runs WHERE task_id=?', (identifier,)).fetchone()
                 self.assertEqual(row[0], expected)
+
+    def test_large_prompt_timeout_and_stdin_delivery(self):
+        prompt = self.p / 'large-prompt.txt'
+        prompt.write_bytes(b'x' * 1024 * 1024)
+        log = self.p / 'runner.log'
+        profile = {'type': 'subprocess', 'timeout_seconds': 1,
+                   'argv': [sys.executable, '-c', 'import time; time.sleep(5)']}
+        code, error = executor.execute(self.p, 'test', profile, prompt, log, self.p, 'TIME-001')
+        self.assertEqual(code, 124, error)
+        profile['timeout_seconds'] = 10
+        profile['argv'] = [sys.executable, '-c',
+                           'import sys; print(len(sys.stdin.buffer.read()))']
+        code, error = executor.execute(self.p, 'test', profile, prompt, log, self.p, 'READ-001')
+        self.assertEqual(code, 0, error)
+        self.assertEqual(log.read_text().strip(), str(1024 * 1024))
 
     def mixed_batch(self, parallel):
         self.add('FAIL-001'); self.add('PASS-001')

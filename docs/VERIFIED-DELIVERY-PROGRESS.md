@@ -1,13 +1,13 @@
 # Verified Delivery progress
 
-Milestone: **CORE-VD-001**. Overall status: **in progress**. Updated 2026-11-16.
+Milestone: **CORE-VD-001**. Overall status: **in progress**. Updated 2026-11-17.
 This record distinguishes completed integration from individual implemented fixes
 and remaining acceptance work. The full milestone is not complete.
 
 | Phase | Status | Evidence / next action |
 |---|---|---|
 | VD-00 Consolidation | Complete | PR #8 merged; all 10 CI jobs passed at 87f9eb2 |
-| VD-01 Coordinator correctness | In progress | Failure reporting and completion-graph validation implemented; eight real-process/graph regression tests passed locally; readiness and cancellation remain |
+| VD-01 Coordinator correctness | In progress | Failure reporting and completion-graph validation implemented; nine real-process/graph regression tests added; readiness and cancellation remain |
 | VD-02 Required verification | Planned | Extend integrated commit receipts with named checks, acceptance/task binding and promotion-time freshness |
 | VD-03 Protected CI | Planned | Required repository checks and application CI profile |
 | VD-04 Release path | Planned | Select reference stack and staging target; prove release and recovery |
@@ -37,9 +37,10 @@ A separate legacy-schema memory-export regression also passed locally.
 - Combined dependency/delegation validation catches direct and transitive cycles.
   Validation, insertion and audit writes share a SQLite write transaction.
 - Local command: `python -m unittest discover -s tests -p test_coordinator_regressions.py -v`.
-  Result: 8 passed on Windows/Python 3.12. Cases include real shell failure, serial
+  Initial result: 8 passed on Windows/Python 3.12; a ninth test covers large-prompt timeout and stdin delivery. Cases include real shell failure, serial
   and parallel mixed batches, timeouts, missing executables, blocked dispatch,
   rejected ancestor cycles, atomic rejection and valid sibling ordering.
+- Windows/Python 3.10 CI exposed a blocking stdin-pipe write that could bypass the timeout. Generic runners now receive the prompt file directly as stdin; a large unread prompt must time out and a reader must still receive its complete contents.
 - Existing OpenCode-error and failed-run tests now assert nonzero CLI results.
   Cross-platform CI must pass before merging this increment.
 

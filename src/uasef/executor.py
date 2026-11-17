@@ -144,10 +144,11 @@ def execute(project, profile_name, profile, prompt_path, log_path, cwd, task_id)
     env = dict(os.environ)
     env.update({"UASEF_TASK_ID":task_id,"UASEF_PROMPT_FILE":str(prompt_path),"UASEF_RUN_PROFILE":profile_name})
     # No shell=True, but the configured program still executes with user permissions.
-    prompt = prompt_path.read_bytes()
-    with open(log_path,"wb") as output:
+    # A file avoids blocking on a full stdin pipe before Windows starts waiting
+    # for the child. The timeout must also apply when the runner never reads stdin.
+    with open(prompt_path,"rb") as prompt, open(log_path,"wb") as output:
         try:
-            completed = subprocess.run(argv, input=prompt, stdout=output, stderr=subprocess.STDOUT,
+            completed = subprocess.run(argv, stdin=prompt, stdout=output, stderr=subprocess.STDOUT,
                                        cwd=cwd, env=env, timeout=timeout, check=False)
             return completed.returncode, ""
         except subprocess.TimeoutExpired:
