@@ -125,10 +125,14 @@ def run(argv, cwd, env, timeout, log_path, *, stdin_path=None, stderr_path=None,
                 job.close()
             if source is not None:
                 source.close()
+        if process is not None and not threads:
+            for pipe in (process.stdin, process.stdout, process.stderr):
+                if pipe is not None:
+                    pipe.close()
         for thread in threads:
             thread.join(timeout=2)
         if any(thread.is_alive() for thread in threads):
             code, error = 125, "Cleanup uncertain; output pipe is still held by an external process"
-        elif exceeded.is_set() or io_error.is_set():
+        elif (exceeded.is_set() or io_error.is_set()) and not error.startswith("Cleanup uncertain"):
             code, error = 125, "Runner output limit exceeded or log write failed"
     return code, error

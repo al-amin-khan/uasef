@@ -7,7 +7,7 @@ and remaining acceptance work. The full milestone is not complete.
 | Phase | Status | Evidence / next action |
 |---|---|---|
 | VD-00 Consolidation | Complete | PR #8 merged; all 10 CI jobs passed at 87f9eb2 |
-| VD-01 Coordinator correctness | Implemented; final CI pending | Failure/cycle fixes in PR #9; readiness in PR #10; managed execution, retry and output controls under final validation |
+| VD-01 Coordinator correctness | Complete on acceptance of PR #11 | PR #9 failure/cycle fixes; PR #10 readiness; PR #11 cancellation, ownership, bounded attempts/output and environment restrictions |
 | VD-02 Required verification | Planned | Extend integrated commit receipts with named checks, acceptance/task binding and promotion-time freshness |
 | VD-03 Protected CI | Planned | Required repository checks and application CI profile |
 | VD-04 Release path | Planned | Select reference stack and staging target; prove release and recovery |
@@ -44,13 +44,12 @@ A separate legacy-schema memory-export regression also passed locally.
 - Existing OpenCode-error and failed-run tests now assert nonzero CLI results.
   Cross-platform CI must pass before merging this increment.
 
-## Next VD-01 increment
+## VD-01 implementation sequence
 
-1. Connect applicable inception readiness to implementation dispatch and manual
-   submission, with a scoped, recorded feasibility-spike exception.
-2. Define cancellation ownership and process-tree cleanup on supported platforms;
-   prevent retries while an earlier managed worker may still be active.
-3. Harmonize runner environment restrictions and bounded attempts/output retention.
+Readiness was delivered in PR #10. Managed cancellation, retry ownership and
+runner environment/attempt/output limits are implemented in the final increment
+below; integration depends on its CI acceptance. Next phase: VD-02 required
+verification tied to task acceptance and the current commit.
 
 No production rollout, paid provider call, repository-protection mutation or
 stable release tag is implied by these changes. Real-provider acceptance remains
@@ -66,7 +65,7 @@ allows one attempt. Existing task statuses/history survive the additive migratio
 Regression coverage includes real inception CLI transitions, malformed state,
 missing approvals/artifacts, blocked claims/manual submissions, spike expiry and
 attempt limits, delegation isolation and migration. Cross-platform checks are
-required before integration. Cancellation and runner restrictions remain pending.
+required before integration. The subsequent managed execution increment is documented below.
 
 
 ## Managed execution increment and VD-01 acceptance
@@ -77,10 +76,17 @@ https://github.com/al-amin-khan/uasef/actions/runs/44017952632 .
 The final VD-01 increment implements cancellation, Windows Job Object/POSIX group
 cleanup, worker ownership locks, audited inspection before uncertain recovery,
 shared runner environment restrictions, bounded attempts and retained output.
-Seven initial runtime regressions passed locally, including real descendant timeout,
-normal-exit cleanup, cancellation ownership, output and environment limits. Final
+Runtime regressions cover real descendant timeout/normal-exit cleanup, cancellation
+ownership, output/environment limits, uncertain cleanup and Windows launch refusal. Final
 cross-platform CI must pass before integration; only then is VD-01 accepted.
 
 Remaining limitations are explicit in ORCHESTRATION.md: no OS sandbox, no rollback
 of external effects, and interrupted POSIX workers/deliberately detached processes
 require operator inspection. VD-02 required verification is the next phase.
+
+
+Acceptance rule: this VD-01 completion entry takes effect when PR #11 is merged
+with all ten CI jobs passing on its final commit (Windows/Linux tests and installed
+package checks on Python 3.10/3.12, plus live Git-tool integration). The PR records
+the immutable CI run and source commit. Subsequent milestones remain planned;
+completion of VD-01 does not certify application or production readiness.

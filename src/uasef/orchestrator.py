@@ -285,7 +285,8 @@ def finish_run(conn, task_id, run_id, token, exit_code, prompt_path, log_path, w
             raise ValueError("Lease mismatch; task may have been recovered by another worker")
         cancelled = conn.execute("SELECT cancel_requested FROM runs WHERE id=?", (run_id,)).fetchone()
         outcome = "awaiting_review" if exit_code == 0 else "failed"
-        if (cancelled and cancelled[0]) or (exit_code == 130 and error.startswith("Cancellation")):
+        if not error.startswith("Cleanup uncertain") and (
+                (cancelled and cancelled[0]) or (exit_code == 130 and error.startswith("Cancellation"))):
             outcome = "cancelled"
         conn.execute("UPDATE tasks SET status=?, lease_token=NULL, lease_until=NULL, updated_at=? WHERE id=?",
                      (outcome,timestamp(),task_id))

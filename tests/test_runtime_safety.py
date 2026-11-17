@@ -118,3 +118,24 @@ class RuntimeSafety(unittest.TestCase):
             self.assertEqual(o.cancel(conn, "WORK-001"), "cancelled")
             with self.assertRaises(ValueError):
                 o.claim(conn, "WORK-001", "test")
+
+    def test_uncertain_cleanup_is_failed_and_requires_inspection(self):
+        self.add()
+        with o.db(self.p) as conn:
+            run, token = o.claim(conn, "WORK-001", "test")
+            o.cancel(conn, "WORK-001")
+            status = o.finish_run(conn, "WORK-001", run, token, 125, "prompt", "log",
+                                  str(self.p), "Cleanup uncertain; worker needs inspection")
+            self.assertEqual(status, "failed")
+            with self.assertRaisesRegex(ValueError, "inspect-note"):
+                o.retry(conn, "WORK-001", "operator")
+            o.retry(conn, "WORK-001", "operator", "Confirmed all workers stopped and reviewed side effects")
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object launch barrier")
+    def test_job_assignment_failure_prevents_configured_program(self):
+        marker = self.p / "must-not-run.txt"
+        script = "import pathlib; pathlib.Path(" + repr(str(marker)) + ").write_text('started')"
+        with patch("uasef.windows_job.Job.assign", side_effect=OSError("Job assignment denied")):
+            code, error = self.execute(script)
+        self.assertEqual(code, 127, error)
+        self.assertFalse(marker.exists())
