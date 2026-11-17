@@ -89,6 +89,8 @@ def db(project):
         conn.execute("ALTER TABLE tasks ADD COLUMN design_task_id TEXT REFERENCES tasks(id)")
     if "design_waiver" not in columns:
         conn.execute("ALTER TABLE tasks ADD COLUMN design_waiver TEXT NOT NULL DEFAULT ''")
+    if "readiness_scope" not in columns:
+        conn.execute("ALTER TABLE tasks ADD COLUMN readiness_scope TEXT NOT NULL DEFAULT '{\"kind\":\"implementation\"}'")
     try:
         yield conn
     finally:
@@ -138,7 +140,7 @@ def validate_completion_graph(conn, task_id, depends, parent_id):
         raise ValueError(f"Task dependency/delegation cycle: {cycle}") from exc
 
 
-def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(), context=(), approval=False, parent_id=None, design_task_id=None, design_waiver=""):
+def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(), context=(), approval=False, parent_id=None, design_task_id=None, design_waiver="", inception_step=None, spike_reason="", spike_scope="", spike_hours=24):
     if not TASK_ID.fullmatch(task_id) or len(task_id) > 80:
         raise ValueError("Task ID must be uppercase alphanumeric with hyphens (e.g. API-001)")
     if not title.strip() or not acceptance.strip():
@@ -183,6 +185,12 @@ def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(),
     from .executor import safe_document
     for filename in context:
         safe_document(base, filename)
+    from . import readiness
+    execution_scope = readiness.scope(inception_step, spike_reason, spike_scope, spike_hours)
+    if inception_step:
+        error = readiness.blocked(base, {"readiness_scope": json.dumps(execution_scope), "role": role, "skill": skill})
+        if error:
+            raise ValueError(error)
     t = timestamp()
     conn.execute("BEGIN IMMEDIATE")
     try:
@@ -192,6 +200,8 @@ def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(),
         conn.execute("INSERT INTO tasks(id,title,role,skill,acceptance,context_paths,dependencies,needs_approval,created_at,updated_at,parent_id,design_gate_required,design_task_id,design_waiver) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                      (task_id,title,role,skill,acceptance,json.dumps(context),json.dumps(depends),int(approval),t,t,parent_id,int(design_gate_required),design_task_id,design_waiver))
         audit(conn, task_id, "created", detail=f"depends={depends}; approval={approval}; parent={parent_id}; design_task={design_task_id or ''}; design_waiver={design_waiver}")
+        conn.execute("UPDATE tasks SET readiness_scope=? WHERE id=?", (json.dumps(execution_scope), task_id))
+        audit(conn, task_id, "readiness_scope", detail=json.dumps(execution_scope))
         if parent_id:
             audit(conn, parent_id, "delegated", detail=f"child={task_id}; role={role}")
         conn.commit()
@@ -208,6 +218,9 @@ def eligible(conn, row):
     if row["status"] != "queued":
         return False
     task_data = dict(row)
+    from . import readiness
+    if readiness.blocked(readiness.project_for(conn), task_data):
+        return False
     if task_data.get("design_gate_required"):
         design_task_id = task_data.get("design_task_id")
         waiver = task_data.get("design_waiver", "")
@@ -218,6 +231,11 @@ def eligible(conn, row):
         elif not waiver:
             return False
     return all(task(conn, d)["status"] == "completed" for d in row["dependencies"])
+
+
+def blocked_reason(conn, task_data):
+    from . import readiness
+    return readiness.blocked(readiness.project_for(conn), task_data) or "Task is not ready (status, dependencies or design gate)"
 
 
 def ready_tasks(conn):
@@ -232,7 +250,7 @@ def claim(conn, task_id, profile, lease_seconds=3600):
     try:
         t = task(conn, task_id)
         if not eligible(conn, t):
-            raise ValueError("Task is not ready (status or dependencies block execution)")
+            raise ValueError(blocked_reason(conn, t))
         now = timestamp()
         conn.execute("UPDATE tasks SET status='running', lease_token=?, lease_until=?, attempts=attempts+1, updated_at=? WHERE id=?",
                      (token, expiry, now, task_id))
@@ -322,8 +340,10 @@ def submit_manual(conn, project, task_id, actor, evidence):
     try:
         t = task(conn,task_id)
         if not eligible(conn,t):
-            raise ValueError("Manual submission only allowed for a ready queued task")
+            raise ValueError(blocked_reason(conn, t))
         conn.execute("UPDATE tasks SET status='awaiting_review',updated_at=? WHERE id=?",(timestamp(),task_id))
+        if json.loads(t["readiness_scope"])["kind"] == "spike":
+            conn.execute("UPDATE tasks SET attempts=attempts+1 WHERE id=?", (task_id,))
         audit(conn,task_id,"manual_submitted",actor=actor,detail=json.dumps(evidence))
         conn.commit()
     except Exception:

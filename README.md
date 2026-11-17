@@ -578,3 +578,13 @@ use the captured intake, and ask only the remaining relevant questions.
 Use `--existing` deliberately for a nonempty folder. Existing initialization and
 file-preservation protections still apply. Scripted `uasef init my-project --idea
 "My idea"` remains noninteractive; the wizard does not require a model or network.
+
+
+### Implementation readiness
+
+Execution requires completed inception, recorded required approvals and available
+inception artifacts. Use `uasef next` to finish planning and `uasef task list` to
+inspect blockers. For agent-assisted planning use `--inception-step`; for a bounded
+early experiment use `--spike-reason`, `--spike-scope` and `--spike-hours`. See
+[the execution guide](docs/ORCHESTRATION.md#inception-readiness-before-implementation-vd-01).
+Existing queued tasks acquire this gate on upgrade; history remains intact.

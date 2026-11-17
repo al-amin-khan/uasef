@@ -65,6 +65,7 @@ def build_prompt(project, task):
     return (f"# UASEF Scoped Task {task['id']}\n\n"
             f"Role: {task['role']}\nSkill: {task['skill']}\n"
             f"Title: {task['title']}\n\nAcceptance criteria:\n{task['acceptance']}\n\n"
+            + "Readiness scope: " + task.get("readiness_scope", '{"kind":"implementation"}') + "\n"
             + design_context +
             "Follow the project rules. Read the repository and verify the actual state. "
             "Prefer vetted existing solutions to custom code. Stay within task scope. "

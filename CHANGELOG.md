@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - Inception readiness (VD-01)
+
+- Gate implementation dispatch, claim and manual submission on completed inception, recorded approvals and present artifacts.
+- Support step-bound planning tasks and scoped, expiring, single-attempt feasibility exceptions.
+- Preserve readiness scope in audit, memory and prompts; migrate existing tasks to the normal gate.
+
 ## Unreleased - Coordinator correctness (VD-01, first increment)
 
 - Return nonzero CLI results for failed/blocked single and bulk dispatch while preserving original runner outcomes.

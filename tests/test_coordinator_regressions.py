@@ -16,6 +16,8 @@ class CoordinatorRegression(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.p = Path(self.tmp.name) / 'project'
         self.assertEqual(self.call('init', str(self.p)), 0)
+        from readiness_fixture import approved_inception
+        approved_inception(self.p)
 
     def call(self, *args):
         output = io.StringIO()
