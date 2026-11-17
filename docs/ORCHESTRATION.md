@@ -129,3 +129,47 @@ Task creation validates explicit dependencies together with the requirement that
 parents wait for their children. Direct, ancestor and transitive dependency cycles
 are rejected atomically, without leaving a partial task or delegation audit entry.
 Existing tasks are not automatically rewritten to repair old cycles.
+
+
+## Inception readiness before implementation (VD-01)
+
+Execution tasks default to implementation work. Before dispatch (including prompt
+preparation), claim or manual submission, all canonical inception steps must be
+completed, required approvals must have meaningful recorded notes, and their
+artifacts must still exist and pass the basic unfinished-template check. Missing,
+malformed or incomplete state blocks execution. This is a local structural check,
+not independent content verification or authenticated approval.
+
+Use `uasef next` to progress inception, and `uasef task list` to see why execution
+is blocked. `dispatch-ready` returns 2 when no task can run because of readiness,
+with the blocking reason; an ordinary empty ready queue still returns 0.
+
+Agents can help with inception itself. Bind planning work to an eligible step;
+its role must match that step and its skill must be a supported planning skill:
+
+```sh
+uasef task add PLAN-001 --title "Clarify the idea" --role product-manager --skill project-inception --acceptance "Write a reviewed idea brief" --inception-step INIT-001
+uasef dispatch PLAN-001
+```
+
+Completing that execution task does not automatically complete or approve the
+inception step. Continue to use `start`, `complete` and `approve` for inception.
+The step's prerequisites must already be complete before creating its planning task.
+
+An early feasibility experiment needs both a reason and a bounded scope:
+
+```sh
+uasef task add SPIKE-001 --title "Check API feasibility" --role backend-engineer --skill feature-implementation --acceptance "Report measured API behavior and discard experimental code" --spike-reason "Measure whether the integration is technically feasible" --spike-scope "Disposable local prototype using synthetic data; no production writes" --spike-hours 24
+```
+
+Each reason/scope is 15-500 characters. Eligibility lasts 1-168 hours (default 24)
+from task creation and allows one claimed run or manual submission. Retry cannot
+reuse the exception; create a new scoped experiment if needed. Child tasks require
+their own scope. Exceptions are persisted in the task, audit, memory export and
+runner prompt, and do not waive design/dependency gates. They are declarations,
+not filesystem isolation or authorization for production access.
+
+Upgrade behavior: existing execution tasks receive the normal implementation
+gate, without changing their status, run history or inception approvals. Already
+running work is not interrupted by this gate. Previously queued tasks may now be
+blocked until inception is finished. There is no blanket project bypass.

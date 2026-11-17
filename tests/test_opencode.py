@@ -51,6 +51,8 @@ class OpenCodeIntegration(unittest.TestCase):
         self.mock=Path(tmp.name)/'mock_opencode.py'
         self.mock.write_text(MOCK_CLI, encoding='utf-8')
         self.assertEqual(self.call('init',str(self.project),'--adapter','opencode'),0,self.output)
+        from readiness_fixture import approved_inception
+        approved_inception(self.project)
         self.assertEqual(self.call('task','add','API-001','--title','Implement endpoint',
             '--role','backend-engineer','--skill','feature-implementation',
             '--acceptance','Tests must pass','--project',str(self.project)),0,self.output)

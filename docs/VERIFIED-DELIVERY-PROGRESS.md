@@ -55,3 +55,15 @@ A separate legacy-schema memory-export regression also passed locally.
 No production rollout, paid provider call, repository-protection mutation or
 stable release tag is implied by these changes. Real-provider acceptance remains
 pending a configured model; backup scope remains UASEF state, not production data.
+
+
+## Readiness increment
+
+Implementation gates now check all canonical inception steps, approval notes and
+artifact availability. Planning tasks may target an eligible inception step;
+a feasibility exception records its scope/reason, expires within seven days and
+allows one attempt. Existing task statuses/history survive the additive migration.
+Regression coverage includes real inception CLI transitions, malformed state,
+missing approvals/artifacts, blocked claims/manual submissions, spike expiry and
+attempt limits, delegation isolation and migration. Cross-platform checks are
+required before integration. Cancellation and runner restrictions remain pending.

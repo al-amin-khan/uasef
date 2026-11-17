@@ -20,6 +20,8 @@ class RoadmapTests(unittest.TestCase):
         self.p = self.root / "project"
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(cli.main(["init", str(self.p), "--idea", "Reliable project history"]), 0)
+            from readiness_fixture import approved_inception
+            approved_inception(self.p)
 
     def task(self):
         with o.db(self.p) as conn:

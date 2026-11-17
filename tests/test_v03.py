@@ -15,6 +15,8 @@ class V03(unittest.TestCase):
         tmp=tempfile.TemporaryDirectory();self.addCleanup(tmp.cleanup)
         self.p=Path(tmp.name)/"app"
         self.assertEqual(self.call("init",str(self.p),"--name","Demo"),0,self.out)
+        from readiness_fixture import approved_inception
+        approved_inception(self.p)
         self.p.joinpath("docs/evidence").mkdir(parents=True)
         (self.p/"docs/evidence/check.txt").write_text("review evidence")
 

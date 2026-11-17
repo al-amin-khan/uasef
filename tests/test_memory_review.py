@@ -15,6 +15,8 @@ class ReviewRegression(unittest.TestCase):
         self.p = Path(self.tmp.name) / 'project'
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(cli.main(['init', str(self.p)]), 0)
+            from readiness_fixture import approved_inception
+            approved_inception(self.p)
 
     def task(self, identifier='API-001'):
         with o.db(self.p) as conn:

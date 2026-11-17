@@ -13,6 +13,8 @@ class ManualSubmissionTests(unittest.TestCase):
                 with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):
                     return cli.main(list(args))
             self.assertEqual(run('init',str(p)),0)
+            from readiness_fixture import approved_inception
+            approved_inception(p)
             self.assertEqual(run('task','add','UX-001','--title','Produce wireframes', '--role','ux-designer',
                                  '--skill','ux-design','--acceptance','Document all screen states', '--project',str(p)),0)
             (p/'evidence.md').write_text('Documented the approved wireframes and reviewed alternative user experiences.')
@@ -29,6 +31,8 @@ class UpgradeTests(unittest.TestCase):
                 with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):
                     return cli.main(list(args))
             self.assertEqual(run('init',str(p)),0)
+            from readiness_fixture import approved_inception
+            approved_inception(p)
             role=p/'.uasef/roles/orchestrator.md'
             role.write_text('custom role retained')
             state=cli.load(p)

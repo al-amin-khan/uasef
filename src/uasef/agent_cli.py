@@ -20,7 +20,7 @@ def add(args):
     with orch.db(args.project) as conn:
         t = orch.add_task(conn,args.project,args.id,args.title,args.role,args.skill,
                           args.acceptance,args.depends,args.context,args.approval_required,args.parent,
-                          args.design_task,args.design_waiver)
+                          args.design_task,args.design_waiver,args.inception_step,args.spike_reason,args.spike_scope,args.spike_hours)
     print(f"Created {t['id']} [{t['status']}] role={t['role']} skill={t['skill']}")
 
 
@@ -30,6 +30,8 @@ def status(args):
         for t in rows:
             flag = " [READY]" if orch.eligible(conn,t) else ""
             gate = f" [design: {t['design_task_id']}]" if t.get("design_task_id") else (" [design waived]" if t.get("design_waiver") else "")
+            if t["status"] == "queued" and not flag:
+                gate += " [blocked: " + orch.blocked_reason(conn,t) + "]"
             print(f"{t['id']:20} {t['status']:19} {t['role']:22} {t['title']}{gate}{flag}")
         if not rows:
             print("No execution tasks yet. Use: uasef task add --help")
@@ -117,7 +119,7 @@ def _dispatch(project, task_id, profile_name, execute, worktree=False, session_i
         raise ValueError("Runner profile does not permit this skill")
     with orch.db(root) as conn:
         if not orch.eligible(conn,t):
-            raise ValueError(f"Task {task_id} is not ready")
+            raise ValueError(orch.blocked_reason(conn,t))
         # Prevalidate context and command before claiming the task.
         ex.build_prompt(root,t)
         if profile.get("type") == "manual":
@@ -183,6 +185,15 @@ def dispatch_ready(args):
         raise ValueError("Parallel execution requires --worktree to avoid workspace collisions")
     with orch.db(args.project) as conn:
         ready=orch.ready_tasks(conn)[:args.limit]
+        if not ready:
+            from . import readiness
+            blocked = [(t["id"], readiness.blocked(args.project, t))
+                       for t in orch.list_tasks(conn) if t["status"] == "queued"]
+            blocked = [(key, reason) for key, reason in blocked if reason]
+            if blocked:
+                for key, reason in blocked:
+                    print(f"Task {key}: {reason}")
+                return 2
     if not ready:
         print("No ready tasks")
         return
@@ -268,6 +279,12 @@ def attach(sub):
             q.add_argument("--actor",required=True);q.add_argument("--note",required=True)
         if name in ("retry","recover"):q.add_argument("--actor",default="operator")
         q.set_defaults(func=fn)
+    for name in ("add", "delegate"):
+        q = actions.choices[name]
+        q.add_argument("--inception-step", help="Planning work for an eligible INIT step")
+        q.add_argument("--spike-reason", default="", help="Reason for a one-attempt feasibility exception")
+        q.add_argument("--spike-scope", default="", help="Bounded experiment scope; not production authorization")
+        q.add_argument("--spike-hours", type=int, default=24, help="Spike eligibility duration, 1-168 hours")
     for q in actions.choices.values():
         q.add_argument("--project",default=".")
     for name,fn in (("dispatch",dispatch),("dispatch-ready",dispatch_ready)):

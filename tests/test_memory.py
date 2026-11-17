@@ -19,6 +19,8 @@ class MemoryTests(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.p = Path(tmp.name) / "product"
         self.call("init", str(self.p), "--idea", "Track changing inventory requirements")
+        from readiness_fixture import approved_inception
+        approved_inception(self.p)
 
     def call(self, *args, expected=0):
         out = io.StringIO()

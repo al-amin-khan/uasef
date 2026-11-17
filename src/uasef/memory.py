@@ -261,7 +261,8 @@ def sync(project):
         columns = {r["name"] for r in conn.execute("PRAGMA table_info(tasks)")}
         fields = ["id", "title", "status", "acceptance", "dependencies"]
         for name, default in (("parent_id", "NULL"), ("design_gate_required", "0"),
-                              ("design_task_id", "NULL"), ("design_waiver", "''")):
+                              ("design_task_id", "NULL"), ("design_waiver", "''"),
+                              ("readiness_scope", "'{\"kind\":\"implementation\"}'")):
             fields.append(name if name in columns else f"{default} AS {name}")
         for t in conn.execute("SELECT " + ",".join(fields) + " FROM tasks"):
             snap = dict(t)

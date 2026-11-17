@@ -18,6 +18,8 @@ class OrchestrationTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.p=Path(self.temp.name)/"sample"
         self.assertEqual(self.invoke("init",str(self.p),"--name","Demo"),0)
+        from readiness_fixture import approved_inception
+        approved_inception(self.p)
         self.p.joinpath("docs/evidence").mkdir(parents=True)
         self.p.joinpath("docs/evidence/review.md").write_text("Independent review inspected the logs, changes, outputs and relevant acceptance checks.")
 
