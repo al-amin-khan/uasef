@@ -7,7 +7,7 @@ and remaining acceptance work. The full milestone is not complete.
 | Phase | Status | Evidence / next action |
 |---|---|---|
 | VD-00 Consolidation | Complete | PR #8 merged; all 10 CI jobs passed at 87f9eb2 |
-| VD-01 Coordinator correctness | In progress | Failure reporting and completion-graph validation implemented; nine real-process/graph regression tests added; readiness and cancellation remain |
+| VD-01 Coordinator correctness | Implemented; final CI pending | Failure/cycle fixes in PR #9; readiness in PR #10; managed execution, retry and output controls under final validation |
 | VD-02 Required verification | Planned | Extend integrated commit receipts with named checks, acceptance/task binding and promotion-time freshness |
 | VD-03 Protected CI | Planned | Required repository checks and application CI profile |
 | VD-04 Release path | Planned | Select reference stack and staging target; prove release and recovery |
@@ -67,3 +67,20 @@ Regression coverage includes real inception CLI transitions, malformed state,
 missing approvals/artifacts, blocked claims/manual submissions, spike expiry and
 attempt limits, delegation isolation and migration. Cross-platform checks are
 required before integration. Cancellation and runner restrictions remain pending.
+
+
+## Managed execution increment and VD-01 acceptance
+
+PR #10 merged readiness after all 10 CI jobs passed (91 tests in each test job):
+https://github.com/al-amin-khan/uasef/actions/runs/44017952632 .
+
+The final VD-01 increment implements cancellation, Windows Job Object/POSIX group
+cleanup, worker ownership locks, audited inspection before uncertain recovery,
+shared runner environment restrictions, bounded attempts and retained output.
+Seven initial runtime regressions passed locally, including real descendant timeout,
+normal-exit cleanup, cancellation ownership, output and environment limits. Final
+cross-platform CI must pass before integration; only then is VD-01 accepted.
+
+Remaining limitations are explicit in ORCHESTRATION.md: no OS sandbox, no rollback
+of external effects, and interrupted POSIX workers/deliberately detached processes
+require operator inspection. VD-02 required verification is the next phase.

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased - Managed execution safety (VD-01)
+
+- Add cancellation requests and managed descendant cleanup on Windows/POSIX.
+- Protect active workers from lease recovery/retry and require an audited inspection note after interrupted or uncertain cleanup.
+- Apply environment allowlists to all runners; cap task attempts and retained stdout/stderr without deleting historical evidence.
+
+
 ## Unreleased - Inception readiness (VD-01)
 
 - Gate implementation dispatch, claim and manual submission on completed inception, recorded approvals and present artifacts.

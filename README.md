@@ -588,3 +588,14 @@ inspect blockers. For agent-assisted planning use `--inception-step`; for a boun
 early experiment use `--spike-reason`, `--spike-scope` and `--spike-hours`. See
 [the execution guide](docs/ORCHESTRATION.md#inception-readiness-before-implementation-vd-01).
 Existing queued tasks acquire this gate on upgrade; history remains intact.
+
+
+### Stop or recover execution
+
+Use `uasef task cancel TASK-ID --actor owner` to request managed cleanup. Running
+cancellation is acknowledged by the worker; inspect `uasef task show TASK-ID`.
+Recovery preserves active workers and requires an inspection note before retrying
+an interrupted run. Tasks default to three attempts and each runner retains at
+most 1 MiB of combined output. Generic runners now require explicit `env_allowlist`
+entries for non-platform environment variables, just like OpenCode runners.
+See [execution controls and limitations](docs/ORCHESTRATION.md#cancellation-retries-and-runner-limits-vd-01).

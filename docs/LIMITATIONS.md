@@ -30,6 +30,8 @@ not enforce required CI checks or authorize deployment. Indexed memory conflicts
 are structural/heuristic findings, not proven semantic contradictions.
 
 Coordinator failure reporting and combined dependency-cycle checks are enforced
-by code. Inception readiness enforcement, complete process-tree cancellation and
-safe retry controls remain planned under VD-01. See the
+by code. Inception readiness, managed process cleanup, cancellation and bounded
+retry/output controls are implemented under VD-01. These are local controls, not
+a sandbox: detached POSIX processes and abrupt worker death require operator
+inspection, and external side effects cannot be rolled back automatically. See the
 [delivery progress record](VERIFIED-DELIVERY-PROGRESS.md).

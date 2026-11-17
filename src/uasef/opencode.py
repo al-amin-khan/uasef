@@ -69,7 +69,7 @@ def _inspect_events(log_path, summary_path):
     return summary
 
 
-def execute_opencode(profile_name, profile, prompt_path, log_path, cwd, task_id, timeout):
+def execute_opencode(profile_name, profile, prompt_path, log_path, cwd, task_id, timeout, cancel_check=None):
     """Use --file instead of stdin/huge argv; OpenCode run accepts file attachments.
 
     The attachment is placed in the active worktree, not the parent project's
@@ -97,20 +97,15 @@ def execute_opencode(profile_name, profile, prompt_path, log_path, cwd, task_id,
     env = _environment(profile, task_id, profile_name, attachment)
     stderr_path = Path(log_path).with_name("runner.stderr.log")
     summary_path = Path(log_path).with_name("opencode-summary.json")
-    try:
-        with Path(log_path).open("wb") as stdout, stderr_path.open("wb") as stderr:
-            completed = subprocess.run(command, stdin=subprocess.DEVNULL,
-                stdout=stdout, stderr=stderr, cwd=workspace, env=env,
-                timeout=timeout, check=False)
-        summary = _inspect_events(log_path, summary_path)
-        if completed.returncode:
-            return completed.returncode, f"OpenCode exited {completed.returncode}; inspect runner logs"
-        if summary["errors"]:
-            return 1, "OpenCode emitted error events; inspect opencode-summary.json"
-        if summary["events"] == 0:
-            return 1, "OpenCode returned no JSON events; check CLI version and logs"
-        return 0, ""
-    except subprocess.TimeoutExpired:
-        return 124, "OpenCode timeout; check for orphan child processes before retry"
-    except OSError as e:
-        return 127, f"OpenCode could not launch: {type(e).__name__}: {e}"
+    from .managed_process import run
+    code, error = run(command, workspace, env, timeout, log_path,
+                      stderr_path=stderr_path, cancel_check=cancel_check,
+                      max_output_bytes=profile.get("max_output_bytes", 1048576))
+    if code:
+        return code, error or f"OpenCode exited {code}; inspect runner logs"
+    summary = _inspect_events(log_path, summary_path)
+    if summary["errors"]:
+        return 1, "OpenCode emitted error events; inspect opencode-summary.json"
+    if summary["events"] == 0:
+        return 1, "OpenCode returned no JSON events; check CLI version and logs"
+    return 0, ""
