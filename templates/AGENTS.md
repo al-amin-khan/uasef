@@ -36,3 +36,13 @@ Use `uasef task list` for blockers. Agent planning tasks must identify an eligib
 recorded reason, bounded scope and expiry; they allow one attempt and do not
 permit production access. Never bypass readiness by editing project state.
 Execution review does not automatically complete or approve inception steps.
+
+
+## Managed execution safety
+
+Request cancellation with `uasef task cancel`; wait for the owning worker's outcome.
+Never delete worker lock files or retry while a managed worker is active. After
+interrupted recovery, inspect external workers and side effects before recording
+`--inspect-note`. Honour attempt/output budgets and explicitly allow only required
+environment variables in runner profiles. Worktrees and process cleanup are not
+OS isolation, and cancellation does not undo external writes.

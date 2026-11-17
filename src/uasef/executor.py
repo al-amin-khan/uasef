@@ -121,6 +121,13 @@ def validate_profile(profile):
     timeout = profile.get("timeout_seconds",600)
     if type(timeout) is not int or not 1 <= timeout <= 3600:
         raise ValueError("timeout_seconds must be an integer from 1 to 3600")
+    allowed = profile.get("env_allowlist", [])
+    if not isinstance(allowed, list) or not all(isinstance(x, str) and
+            re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", x) for x in allowed):
+        raise ValueError("env_allowlist must contain environment variable names")
+    cap = profile.get("max_output_bytes", 1048576)
+    if type(cap) is not int or not 1024 <= cap <= 10485760:
+        raise ValueError("max_output_bytes must be an integer from 1024 to 10485760")
     if profile["type"] == "opencode":
         agent = profile.get("agent", "build")
         model = profile.get("model")
@@ -136,23 +143,13 @@ def validate_profile(profile):
     return timeout
 
 
-def execute(project, profile_name, profile, prompt_path, log_path, cwd, task_id):
+def execute(project, profile_name, profile, prompt_path, log_path, cwd, task_id, cancel_check=None):
     timeout = validate_profile(profile)
     if profile["type"] == "opencode":
         from .opencode import execute_opencode
-        return execute_opencode(profile_name, profile, prompt_path, log_path, cwd, task_id, timeout)
-    argv = profile["argv"]
-    env = dict(os.environ)
-    env.update({"UASEF_TASK_ID":task_id,"UASEF_PROMPT_FILE":str(prompt_path),"UASEF_RUN_PROFILE":profile_name})
-    # No shell=True, but the configured program still executes with user permissions.
-    # A file avoids blocking on a full stdin pipe before Windows starts waiting
-    # for the child. The timeout must also apply when the runner never reads stdin.
-    with open(prompt_path,"rb") as prompt, open(log_path,"wb") as output:
-        try:
-            completed = subprocess.run(argv, stdin=prompt, stdout=output, stderr=subprocess.STDOUT,
-                                       cwd=cwd, env=env, timeout=timeout, check=False)
-            return completed.returncode, ""
-        except subprocess.TimeoutExpired:
-            return 124, "Runner timeout; inspect process tree and worktree before retry"
-        except OSError as e:
-            return 127, f"Runner could not launch: {type(e).__name__}: {e}"
+        return execute_opencode(profile_name, profile, prompt_path, log_path, cwd, task_id, timeout, cancel_check)
+    from .opencode import _environment
+    from .managed_process import run
+    return run(profile["argv"], cwd, _environment(profile, task_id, profile_name, prompt_path),
+               timeout, log_path, stdin_path=prompt_path, cancel_check=cancel_check,
+               max_output_bytes=profile.get("max_output_bytes", 1048576))

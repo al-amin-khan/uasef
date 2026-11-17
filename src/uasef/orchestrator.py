@@ -5,7 +5,7 @@ not a distributed job queue or a security boundary. Every state change is audite
 """
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import datetime, timedelta, timezone
 from graphlib import CycleError, TopologicalSorter
 import json
@@ -91,6 +91,11 @@ def db(project):
         conn.execute("ALTER TABLE tasks ADD COLUMN design_waiver TEXT NOT NULL DEFAULT ''")
     if "readiness_scope" not in columns:
         conn.execute("ALTER TABLE tasks ADD COLUMN readiness_scope TEXT NOT NULL DEFAULT '{\"kind\":\"implementation\"}'")
+    if "max_attempts" not in columns:
+        conn.execute("ALTER TABLE tasks ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 3")
+    run_columns = {row["name"] for row in conn.execute("PRAGMA table_info(runs)")}
+    if "cancel_requested" not in run_columns:
+        conn.execute("ALTER TABLE runs ADD COLUMN cancel_requested INTEGER NOT NULL DEFAULT 0")
     try:
         yield conn
     finally:
@@ -140,11 +145,13 @@ def validate_completion_graph(conn, task_id, depends, parent_id):
         raise ValueError(f"Task dependency/delegation cycle: {cycle}") from exc
 
 
-def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(), context=(), approval=False, parent_id=None, design_task_id=None, design_waiver="", inception_step=None, spike_reason="", spike_scope="", spike_hours=24):
+def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(), context=(), approval=False, parent_id=None, design_task_id=None, design_waiver="", inception_step=None, spike_reason="", spike_scope="", spike_hours=24, max_attempts=3):
     if not TASK_ID.fullmatch(task_id) or len(task_id) > 80:
         raise ValueError("Task ID must be uppercase alphanumeric with hyphens (e.g. API-001)")
     if not title.strip() or not acceptance.strip():
         raise ValueError("Title and explicit acceptance criteria are required")
+    if type(max_attempts) is not int or not 1 <= max_attempts <= 10:
+        raise ValueError("max_attempts must be an integer from 1 to 10")
     base = Path(project).resolve()
     if not (base / ".uasef" / "roles" / f"{role}.md").is_file():
         raise ValueError(f"Unknown role {role}")
@@ -201,7 +208,9 @@ def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(),
                      (task_id,title,role,skill,acceptance,json.dumps(context),json.dumps(depends),int(approval),t,t,parent_id,int(design_gate_required),design_task_id,design_waiver))
         audit(conn, task_id, "created", detail=f"depends={depends}; approval={approval}; parent={parent_id}; design_task={design_task_id or ''}; design_waiver={design_waiver}")
         conn.execute("UPDATE tasks SET readiness_scope=? WHERE id=?", (json.dumps(execution_scope), task_id))
+        conn.execute("UPDATE tasks SET max_attempts=? WHERE id=?", (max_attempts, task_id))
         audit(conn, task_id, "readiness_scope", detail=json.dumps(execution_scope))
+        audit(conn, task_id, "attempt_limit", detail=str(max_attempts))
         if parent_id:
             audit(conn, parent_id, "delegated", detail=f"child={task_id}; role={role}")
         conn.commit()
@@ -215,7 +224,8 @@ def add_task(conn, project, task_id, title, role, skill, acceptance, depends=(),
 
 
 def eligible(conn, row):
-    if row["status"] != "queued":
+    row = dict(row)
+    if row["status"] != "queued" or row.get("attempts", 0) >= row.get("max_attempts", 3):
         return False
     task_data = dict(row)
     from . import readiness
@@ -234,6 +244,8 @@ def eligible(conn, row):
 
 
 def blocked_reason(conn, task_data):
+    if task_data.get("attempts", 0) >= task_data.get("max_attempts", 3):
+        return "Task attempt limit reached; create a newly scoped task after inspecting prior outcomes"
     from . import readiness
     return readiness.blocked(readiness.project_for(conn), task_data) or "Task is not ready (status, dependencies or design gate)"
 
@@ -271,7 +283,11 @@ def finish_run(conn, task_id, run_id, token, exit_code, prompt_path, log_path, w
         t = task(conn, task_id)
         if t["status"] != "running" or t["lease_token"] != token:
             raise ValueError("Lease mismatch; task may have been recovered by another worker")
+        cancelled = conn.execute("SELECT cancel_requested FROM runs WHERE id=?", (run_id,)).fetchone()
         outcome = "awaiting_review" if exit_code == 0 else "failed"
+        if not error.startswith("Cleanup uncertain") and (
+                (cancelled and cancelled[0]) or (exit_code == 130 and error.startswith("Cancellation"))):
+            outcome = "cancelled"
         conn.execute("UPDATE tasks SET status=?, lease_token=NULL, lease_until=NULL, updated_at=? WHERE id=?",
                      (outcome,timestamp(),task_id))
         cur = conn.execute("UPDATE runs SET finished_at=?, exit_code=?, status=?, prompt_path=?, log_path=?, workspace=?, error=? WHERE id=? AND task_id=? AND status='running'",
@@ -342,8 +358,7 @@ def submit_manual(conn, project, task_id, actor, evidence):
         if not eligible(conn,t):
             raise ValueError(blocked_reason(conn, t))
         conn.execute("UPDATE tasks SET status='awaiting_review',updated_at=? WHERE id=?",(timestamp(),task_id))
-        if json.loads(t["readiness_scope"])["kind"] == "spike":
-            conn.execute("UPDATE tasks SET attempts=attempts+1 WHERE id=?", (task_id,))
+        conn.execute("UPDATE tasks SET attempts=attempts+1 WHERE id=?", (task_id,))
         audit(conn,task_id,"manual_submitted",actor=actor,detail=json.dumps(evidence))
         conn.commit()
     except Exception:
@@ -370,14 +385,24 @@ def approve(conn, task_id, actor, note):
         raise
 
 
-def retry(conn, task_id, actor):
+def retry(conn, task_id, actor, inspect_note=""):
     conn.execute("BEGIN IMMEDIATE")
     try:
         t = task(conn,task_id)
+        from .worker_lock import active
+        from .readiness import project_for
+        if active(project_for(conn), task_id):
+            raise ValueError("A managed worker is still active; wait for cancellation cleanup")
+        if t["attempts"] >= t["max_attempts"]:
+            raise ValueError("Task attempt limit reached")
+        latest = conn.execute("SELECT status,error FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1", (task_id,)).fetchone()
+        if latest and (latest["status"] == "interrupted" or "Cleanup uncertain" in (latest["error"] or "")):
+            if not 15 <= len(inspect_note.strip()) <= 1000:
+                raise ValueError("Inspect external workers and side effects, then provide --inspect-note (15-1000 characters)")
         if t["status"] != "failed":
             raise ValueError("Only failed tasks can be retried; running tasks require lease recovery")
         conn.execute("UPDATE tasks SET status='queued',updated_at=? WHERE id=?",(timestamp(),task_id))
-        audit(conn,task_id,"retry",actor=actor)
+        audit(conn,task_id,"retry",actor=actor,detail=inspect_note)
         conn.commit()
     except Exception:
         conn.rollback()
@@ -390,6 +415,10 @@ def recover_expired(conn, actor="operator"):
     try:
         for row in conn.execute("SELECT id,lease_token FROM tasks WHERE status='running' AND lease_until<?",(timestamp(),)):
             task_id = row["id"]
+            from .worker_lock import active
+            from .readiness import project_for
+            if active(project_for(conn), task_id):
+                continue
             conn.execute("UPDATE tasks SET status='failed',lease_token=NULL,lease_until=NULL,updated_at=? WHERE id=?",(timestamp(),task_id))
             conn.execute("UPDATE runs SET status='interrupted',finished_at=?,error='Lease expired; verify external process stopped before retry' WHERE task_id=? AND status='running'",(timestamp(),task_id))
             audit(conn,task_id,"lease_expired",actor=actor,detail="Marked failed; inspect worker before retry")
@@ -399,3 +428,29 @@ def recover_expired(conn, actor="operator"):
         conn.rollback()
         raise
     return recovered
+
+
+def cancel_requested(project, run_id):
+    with closing(sqlite3.connect(database_path(project), timeout=15)) as conn:
+        row = conn.execute("SELECT cancel_requested FROM runs WHERE id=?", (run_id,)).fetchone()
+        return bool(row and row[0])
+
+
+def cancel(conn, task_id, actor="operator"):
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        t = task(conn, task_id)
+        if t["status"] in TERMINAL:
+            raise ValueError("Task is already closed")
+        if t["status"] == "running":
+            conn.execute("UPDATE runs SET cancel_requested=1 WHERE task_id=? AND status='running'", (task_id,))
+            result = "cancellation requested"
+        else:
+            conn.execute("UPDATE tasks SET status='cancelled',updated_at=? WHERE id=?", (timestamp(), task_id))
+            result = "cancelled"
+        audit(conn, task_id, "cancel_requested", actor=actor, detail=result)
+        conn.commit()
+        return result
+    except Exception:
+        conn.rollback()
+        raise

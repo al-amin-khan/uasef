@@ -107,7 +107,9 @@ class RoadmapTests(unittest.TestCase):
             self.assertEqual(o.recover_expired(conn), [])
             with self.assertRaises(ValueError):
                 o.finish_run(conn, "API-001", run, token, 0, "prompt", "log", self.p, "")
-            o.retry(conn, "API-001", "owner")
+            with self.assertRaisesRegex(ValueError, "inspect-note"):
+                o.retry(conn, "API-001", "owner")
+            o.retry(conn, "API-001", "owner", "Confirmed external worker stopped; inspected side effects")
             _, fresh = o.claim(conn, "API-001", "worker2")
             self.assertNotEqual(token, fresh)
 

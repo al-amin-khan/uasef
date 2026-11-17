@@ -173,3 +173,50 @@ Upgrade behavior: existing execution tasks receive the normal implementation
 gate, without changing their status, run history or inception approvals. Already
 running work is not interrupted by this gate. Previously queued tasks may now be
 blocked until inception is finished. There is no blanket project bypass.
+
+
+## Cancellation, retries and runner limits (VD-01)
+
+`uasef task cancel TASK-ID --actor owner` closes a queued/review task immediately.
+For a running task it records a cancellation request; the task remains running
+until its owning worker stops the managed process tree and records the outcome.
+Use `task show` to inspect the run. A cancelled task is terminal; inspect its side
+effects and create explicitly scoped replacement work instead of restarting it.
+Ctrl+C during managed execution follows the same cleanup path.
+
+Managed workers hold an OS ownership lock through execution and outcome recording.
+Lease recovery skips active managed workers, and retry refuses their tasks. If a
+worker died, `task recover` marks its expired lease interrupted. Retry then requires
+`--inspect-note "Confirmed worker stopped and inspected external side effects"`.
+The note is audited; it is a local operator declaration, not automatic proof that
+external systems are unchanged. Never delete ownership lock files while workers run.
+
+Windows execution uses a kill-on-close Job Object. A launcher waits until assigned
+to that job before starting the configured program; inability to establish ownership
+fails before launch. POSIX execution uses a new process group. Timeout, cancellation,
+output-limit failure and normal parent exit stop remaining managed descendants.
+Detached POSIX processes that deliberately leave the group are outside this control;
+a forcibly killed POSIX worker cannot run cleanup. Inspect orphan processes after
+interrupted recovery. This is not an OS sandbox or a rollback of external effects.
+
+Both generic and OpenCode runners inherit only platform startup/configuration
+variables plus explicitly named `env_allowlist` entries. Provider/API secrets must
+be opted in. Programs can still read files accessible to the current user, including
+provider config; use a separate OS/container boundary where needed.
+
+Tasks default to three attempts, configurable at creation with `--max-attempts 1..10`.
+Both a claimed run and manual submission consume an attempt. Existing tasks receive
+the default cap; existing history is preserved, so a task already at the limit
+cannot retry. Feasibility spikes retain their stricter one-attempt eligibility.
+
+Runner profiles accept `max_output_bytes` (1024..10485760, default 1048576).
+The cap applies to combined stdout/stderr bytes retained per run. Excess output
+stops the runner and fails the run; it is never reported as success. Failed-attempt
+logs remain available within the task's attempt/output budgets. This does not cap
+files the program writes directly, the number of tasks, or total project storage.
+Historical evidence is not silently deleted.
+
+Internal runner outcomes: timeout 124, output/cleanup failure 125, launch failure
+127, cancellation 130. Dispatch exposes nonzero failure/cancellation to its caller;
+original runner results remain in the run record. An uncertain cleanup requires an
+inspection note before retry. Ordinary nonzero exits retain their original code.

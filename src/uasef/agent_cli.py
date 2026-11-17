@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from contextlib import nullcontext
 import json
 from pathlib import Path
 
@@ -20,7 +21,7 @@ def add(args):
     with orch.db(args.project) as conn:
         t = orch.add_task(conn,args.project,args.id,args.title,args.role,args.skill,
                           args.acceptance,args.depends,args.context,args.approval_required,args.parent,
-                          args.design_task,args.design_waiver,args.inception_step,args.spike_reason,args.spike_scope,args.spike_hours)
+                          args.design_task,args.design_waiver,args.inception_step,args.spike_reason,args.spike_scope,args.spike_hours,args.max_attempts)
     print(f"Created {t['id']} [{t['status']}] role={t['role']} skill={t['skill']}")
 
 
@@ -65,16 +66,22 @@ def approve(args):
 
 def retry(args):
     with orch.db(args.project) as conn:
-        orch.retry(conn,args.id,args.actor)
+        orch.retry(conn,args.id,args.actor,args.inspect_note)
     print(f"Task {args.id} requeued.")
+
+
+def cancel(args):
+    with orch.db(args.project) as conn:
+        result = orch.cancel(conn, args.id, args.actor)
+    print(f"Task {args.id}: {result}. Running cancellation completes when the owning worker acknowledges cleanup.")
 
 
 def recover(args):
     with orch.db(args.project) as conn:
         rows = orch.recover_expired(conn,args.actor)
-    print(f"Expired running leases marked failed: {', '.join(rows) if rows else '(none)'}")
+    print(f"Expired inactive worker leases marked failed: {', '.join(rows) if rows else '(none)'}")
     if rows:
-        print("Inspect external workers and worktrees before retrying; lease expiry does not kill orphan processes.")
+        print("Active managed workers are preserved. Inspect external workers and side effects, then retry with --inspect-note.")
 
 
 def profiles(args):
@@ -94,6 +101,15 @@ def tree(args):
 
 
 def _dispatch(project, task_id, profile_name, execute, worktree=False, session_id=None):
+    from .worker_lock import own
+    # Validate task identifiers before using them as lock file names.
+    if not orch.TASK_ID.fullmatch(task_id) or len(task_id) > 80:
+        raise ValueError("Invalid task ID")
+    with own(project, task_id) if execute else nullcontext():
+        return _dispatch_owned(project, task_id, profile_name, execute, worktree, session_id)
+
+
+def _dispatch_owned(project, task_id, profile_name, execute, worktree=False, session_id=None):
     root=Path(project).resolve()
     from . import routing, sessions
     config=ex.load_runner_config(root)
@@ -153,7 +169,10 @@ def _dispatch(project, task_id, profile_name, execute, worktree=False, session_i
                 sessions.record(conn,root,session_id,"runner_started",profile_name,f"Runner started; run={run_id}")
         if worktree:
             workspace=ex.make_worktree(root,task_id,run_id)
-        code,err=ex.execute(root,profile_name,profile,prompt_path,log_path,workspace,task_id)
+        code,err=ex.execute(root,profile_name,profile,prompt_path,log_path,workspace,task_id,
+                            cancel_check=lambda: orch.cancel_requested(root, run_id))
+    except KeyboardInterrupt:
+        code,err=130,"Cancellation by keyboard interrupt before runner launch"
     except Exception as exc:
         err=f"Dispatch error: {type(exc).__name__}: {exc}"
     with orch.db(root) as conn:
@@ -167,9 +186,9 @@ def _dispatch(project, task_id, profile_name, execute, worktree=False, session_i
                 pass
     message = (f"Task {task_id}: {result}; run={run_id}; exit={code}; workspace={workspace}; log={log_path}. "
             + (f"Error: {err}. " if err else "")
-            + ("Requires independent review and test evidence before completion." if code==0 else "Inspect logs, then use 'uasef task retry' if appropriate."))
+            + ("Cancellation completed; inspect side effects before creating replacement work." if result=="cancelled" else "Requires independent review and test evidence before completion." if code==0 else "Inspect logs, then use 'uasef task retry' if appropriate."))
 
-    return DispatchResult(message, 0 if code == 0 else 1)
+    return DispatchResult(message, 0 if code == 0 and result != "cancelled" else 1)
 
 
 def dispatch(args):
@@ -267,9 +286,9 @@ def attach(sub):
     q.add_argument("--design-task",help="Required approved UX task for a frontend-engineer task")
     q.add_argument("--design-waiver",help="Reason to skip UX review for this frontend task (15-500 characters)")
     q.set_defaults(func=add)
-    for name,fn in (("list",status),("tree",tree),("show",details),("verify",verify),("submit",submit),("approve",approve),("retry",retry),("recover",recover)):
+    for name,fn in (("list",status),("tree",tree),("show",details),("verify",verify),("submit",submit),("approve",approve),("retry",retry),("recover",recover),("cancel",cancel)):
         q=actions.add_parser(name)
-        if name in ("show","verify","submit","approve","retry"):q.add_argument("id")
+        if name in ("show","verify","submit","approve","retry","cancel"):q.add_argument("id")
         if name=="verify":
             q.add_argument("--verification", help="Passing verification receipt for the current clean commit")
             q.add_argument("--reviewer",required=True);q.add_argument("--evidence",action="append",required=True)
@@ -277,10 +296,12 @@ def attach(sub):
             q.add_argument("--actor",required=True);q.add_argument("--evidence",action="append",required=True)
         if name=="approve":
             q.add_argument("--actor",required=True);q.add_argument("--note",required=True)
-        if name in ("retry","recover"):q.add_argument("--actor",default="operator")
+        if name == "retry":q.add_argument("--inspect-note", default="", help="Confirm orphan/side-effect inspection after uncertain recovery")
+        if name in ("retry","recover","cancel"):q.add_argument("--actor",default="operator")
         q.set_defaults(func=fn)
     for name in ("add", "delegate"):
         q = actions.choices[name]
+        q.add_argument("--max-attempts", type=int, default=3, help="Maximum attempts for this task, 1-10")
         q.add_argument("--inception-step", help="Planning work for an eligible INIT step")
         q.add_argument("--spike-reason", default="", help="Reason for a one-attempt feasibility exception")
         q.add_argument("--spike-scope", default="", help="Bounded experiment scope; not production authorization")
